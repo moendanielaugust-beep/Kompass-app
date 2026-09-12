@@ -1,0 +1,1953 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kompass</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#B4752A">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<style>
+  :root{
+    --paper-outer:#E8E2D3; --paper-screen:#FBF8F2; --ink:#1C1B18; --ink-soft:#7A7468;
+    --line:#EAE4D6; --brass:#B4752A; --brass-deep:#8A5A1F; --brass-tint:#F5E8D2;
+    --moss:#5B6B4A; --moss-tint:#E8ECDD; --chrome:#141311; --shadow:rgba(139,90,31,0.13);
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  body{margin:0;background:linear-gradient(160deg,#F0E7D6,#E8DFC9 55%,#EDE3CF);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:var(--ink);padding:32px 16px 60px;}
+  .intro{max-width:360px;margin:0 auto 26px;text-align:center;}
+  .intro .wordmark{font-family:ui-monospace,'SF Mono','IBM Plex Mono',monospace;font-size:12px;letter-spacing:0.08em;color:var(--ink-soft);margin:0 0 8px;}
+  .intro h1{font-size:23px;font-weight:600;margin:0 0 6px;letter-spacing:-0.01em;}
+  .intro p{font-size:14px;color:var(--ink-soft);margin:0;line-height:1.5;}
+  .phone{width:320px;margin:0 auto;background:var(--chrome);border-radius:44px;padding:8px;box-shadow:0 20px 40px var(--shadow);}
+  .phone-screen{background:var(--paper-screen);border-radius:38px;overflow:hidden;min-height:660px;display:flex;flex-direction:column;position:relative;}
+  .island{position:absolute;top:10px;left:50%;transform:translateX(-50%);width:84px;height:22px;background:var(--chrome);border-radius:14px;z-index:5;}
+  .statusbar{display:flex;justify-content:space-between;padding:16px 22px 4px;font-size:13px;font-weight:600;color:var(--ink);}
+  .screen{display:none;flex:1;padding:10px 20px 6px;flex-direction:column;overflow-y:auto;min-height:0;}
+  .screen.active{display:flex;animation:fadein 0.28s ease;}
+  @keyframes fadein{from{opacity:0;transform:translateY(5px);}to{opacity:1;transform:translateY(0);}}
+  @media (prefers-reduced-motion: reduce){.screen.active{animation:none;}}
+  @media (max-width:480px){
+    body{padding:14px 10px;background:linear-gradient(160deg,#F0E7D6,#E8DFC9 55%,#EDE3CF);min-height:100vh;min-height:100dvh;display:flex;align-items:center;justify-content:center;}
+    .intro{display:none;}
+    .phone{width:auto;height:92vh;height:92dvh;aspect-ratio:9/19.5;max-width:94vw;margin:0;}
+    .phone-screen{height:100%;min-height:0;}
+  }
+  .eyebrow{font-family:ui-monospace,'SF Mono','IBM Plex Mono',monospace;font-size:11px;color:var(--ink-soft);margin:0 0 2px;letter-spacing:0.02em;}
+  h2.screen-title{font-size:22px;font-weight:600;margin:0 0 14px;letter-spacing:-0.01em;}
+  .mode-toggle{display:flex;background:var(--line);border-radius:11px;padding:3px;margin:0 0 16px;}
+  .mode-btn{flex:1;background:none;border:none;padding:7px 4px;border-radius:9px;font-family:inherit;font-size:13px;font-weight:500;color:var(--ink-soft);cursor:pointer;transition:transform 0.1s;}
+  .mode-btn.active{background:var(--paper-screen);color:var(--ink);box-shadow:0 1px 4px var(--shadow);}
+  .mode-btn:active{transform:scale(0.97);}
+  .progress-strip{height:5px;background:var(--line);border-radius:3px;margin:0 0 18px;overflow:hidden;}
+  .progress-strip > div{height:100%;width:0%;background:var(--brass);border-radius:3px;transition:width 0.3s ease;}
+  .focus-card{background:var(--brass-tint);border-radius:26px;padding:16px 18px;margin-bottom:18px;box-shadow:0 6px 16px var(--shadow);}
+  .focus-card .label{font-size:11px;color:var(--brass-deep);font-weight:600;letter-spacing:0.03em;margin:0 0 5px;}
+  .focus-card .task{font-size:16px;font-weight:500;margin:0;line-height:1.35;}
+  .task-row{display:flex;align-items:center;gap:12px;padding:12px 0;}
+  .checkbox{width:22px;height:22px;border-radius:50%;border:2px solid var(--line);flex-shrink:0;position:relative;transition:transform 0.1s;}
+  .checkbox.done{background:var(--moss);border-color:var(--moss);}
+  .checkbox.done::after{content:"✓";color:#fff;font-size:12px;position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-weight:700;}
+  .task-body{flex:1;}
+  .task-body .name{font-size:14.5px;margin:0;font-weight:500;}
+  .task-body .course{font-size:12.5px;color:var(--ink-soft);margin:2px 0 0;}
+  .task-time{font-family:ui-monospace,'SF Mono','IBM Plex Mono',monospace;font-size:12px;color:var(--ink-soft);}
+  .cta{margin-top:auto;background:var(--brass);color:#fff;border:none;border-radius:16px;padding:15px;font-size:15px;font-family:inherit;font-weight:600;cursor:pointer;transition:transform 0.1s;}
+  .cta:active{transform:scale(0.97);}
+  .deadline-group{margin-bottom:18px;}
+  .deadline-group .course-label{font-family:ui-monospace,'SF Mono','IBM Plex Mono',monospace;font-size:11px;color:var(--ink-soft);margin:0 0 8px;letter-spacing:0.02em;}
+  .deadline-row{display:flex;justify-content:space-between;align-items:center;padding:9px 0;}
+  .deadline-row .name{font-size:14.5px;font-weight:500;}
+  .chip{font-size:11.5px;font-weight:600;padding:4px 10px;border-radius:8px;}
+  .chip.soon{background:var(--brass-tint);color:var(--brass-deep);}
+  .chip.later{background:var(--line);color:var(--ink-soft);}
+  .chip.done{background:var(--moss-tint);color:var(--moss);}
+  .integrations{border-top:1px solid var(--line);padding-top:14px;margin-top:auto;}
+  .integrations .label{font-size:11px;font-weight:600;color:var(--ink-soft);margin:0 0 10px;letter-spacing:0.02em;}
+  .integ-row{display:flex;justify-content:space-between;padding:6px 0;font-size:13.5px;}
+  .integ-row span.status{color:var(--moss);font-size:12px;font-weight:500;}
+  .plan-card{background:var(--paper-screen);border:1px solid var(--line);border-radius:24px;padding:18px;margin-bottom:14px;position:relative;transition:transform 0.1s;}
+  .plan-card:active{transform:scale(0.98);}
+  .plan-card.featured{border:none;box-shadow:0 10px 24px var(--shadow);background:linear-gradient(180deg,var(--brass-tint),var(--paper-screen));}
+  .badge{display:inline-block;background:var(--brass);color:#fff;font-size:10.5px;font-weight:600;padding:3px 10px;border-radius:8px;margin-bottom:8px;}
+  .plan-name{font-size:15px;font-weight:600;margin:2px 0 4px;}
+  .plan-price{font-family:ui-monospace,'SF Mono','IBM Plex Mono',monospace;font-size:22px;font-weight:600;margin:0 0 10px;}
+  .plan-price span{font-size:12px;color:var(--ink-soft);font-family:inherit;font-weight:400;}
+  .plan-features{list-style:none;margin:0 0 14px;padding:0;}
+  .plan-features li{font-size:13px;padding:4px 0;color:var(--ink-soft);}
+  .plan-btn{width:100%;padding:12px;border-radius:14px;font-size:14px;font-weight:600;font-family:inherit;cursor:pointer;transition:transform 0.1s;}
+  .plan-btn:active{transform:scale(0.97);}
+  .plan-btn.primary{background:var(--brass);color:#fff;border:none;}
+  .plan-btn.secondary{background:var(--line);color:var(--ink);border:none;}
+  .tabbar{display:flex;background:rgba(251,248,242,0.75);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-top:1px solid var(--line);padding:8px 4px 10px;}
+  .tab{flex:1;background:none;border:none;padding:4px 2px;font-family:inherit;font-size:10.5px;font-weight:500;color:var(--ink-soft);cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px;transition:transform 0.1s;}
+  .tab:active{transform:scale(0.92);}
+  .tab.active{color:var(--brass);}
+  .tab svg{width:22px;height:22px;}
+  .avatar-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;}
+  .avatar-card{background:var(--paper-screen);border:1px solid var(--line);border-radius:22px;padding:14px 10px;text-align:center;cursor:pointer;position:relative;transition:transform 0.1s;}
+  .avatar-card:active{transform:scale(0.97);}
+  .avatar-card.selected{box-shadow:0 6px 16px var(--shadow);border-color:transparent;}
+  .avatar-card .check{display:none;position:absolute;top:8px;right:8px;width:18px;height:18px;background:var(--brass);border-radius:50%;color:#fff;font-size:10px;align-items:center;justify-content:center;}
+  .avatar-card.selected .check{display:flex;}
+  .avatar-card svg.face{margin-bottom:8px;}
+  .avatar-card .aname{font-size:13.5px;font-weight:600;margin:0;}
+  .avatar-card .atag{font-size:11px;color:var(--ink-soft);margin:2px 0 0;line-height:1.3;}
+
+  .course-card{display:flex;align-items:center;gap:12px;padding:9px 0;}
+  .ring{--pct:0;width:42px;height:42px;border-radius:50%;background:conic-gradient(var(--brass) calc(var(--pct)*1%),var(--line) 0);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+  .ring::before{content:'';position:absolute;width:30px;height:30px;border-radius:50%;background:var(--paper-screen);}
+  .ring-label{position:relative;font-size:10.5px;font-weight:700;}
+  .course-info .cname{font-size:14px;font-weight:600;margin:0;}
+  .course-info .csub{font-size:11.5px;color:var(--ink-soft);margin:2px 0 0;}
+  .course-list{margin-bottom:6px;}
+  .focus-progress{background:var(--paper-screen);border:1px solid var(--line);border-radius:18px;padding:14px 16px;margin-bottom:14px;}
+  .fp-header{display:flex;justify-content:space-between;font-size:13px;font-weight:600;margin-bottom:8px;}
+  .fp-header span:last-child{color:var(--brass-deep);}
+  .fp-sub{font-size:12px;color:var(--ink-soft);margin:8px 0 10px;line-height:1.4;}
+  .fp-btn{width:100%;padding:10px;border-radius:12px;background:var(--brass-tint);color:var(--brass-deep);border:none;font-family:inherit;font-weight:600;font-size:13px;cursor:pointer;transition:transform 0.1s;}
+  .fp-btn:active{transform:scale(0.97);}
+  .fp-btn:disabled{opacity:0.45;cursor:default;}
+  .price-old{text-decoration:line-through;color:var(--ink-soft);font-size:13px;font-weight:400;margin-right:6px;}
+
+  .carousel{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;gap:12px;margin:0 -20px 10px;padding:2px 20px 6px;-webkit-overflow-scrolling:touch;scrollbar-width:none;}
+  .carousel::-webkit-scrollbar{display:none;}
+  .hero-card{flex:0 0 80%;scroll-snap-align:center;background:var(--paper-screen);border:1px solid var(--line);border-radius:24px;padding:16px;box-shadow:0 6px 16px var(--shadow);}
+  .ring-lg{--pct:0;--ring-color:var(--brass);position:relative;width:60px;height:60px;border-radius:50%;background:conic-gradient(var(--ring-color) calc(var(--pct)*1%),var(--line) 0);display:flex;align-items:center;justify-content:center;margin-bottom:10px;}
+  .ring-lg::before{content:'';position:absolute;width:46px;height:46px;border-radius:50%;background:var(--paper-screen);}
+  .ring-lg span{position:relative;font-size:13px;font-weight:700;}
+  .hero-card .hname{font-size:16px;font-weight:600;margin:0 0 2px;}
+  .hero-card .hsub{font-size:12.5px;color:var(--ink-soft);margin:0 0 10px;}
+  .hero-card .hnext{font-size:11.5px;font-weight:600;color:var(--brass-deep);background:var(--brass-tint);display:inline-block;padding:4px 10px;border-radius:8px;}
+  .dots{display:flex;justify-content:center;gap:6px;margin-bottom:14px;}
+  .dot{width:6px;height:6px;border-radius:50%;background:var(--line);transition:all 0.2s;}
+  .dot.active{background:var(--brass);width:16px;border-radius:3px;}
+  .app-header{text-align:center;font-family:ui-monospace,'SF Mono','IBM Plex Mono',monospace;font-size:10.5px;font-weight:600;letter-spacing:0.1em;color:var(--ink-soft);margin:2px 0 4px;}
+  .forest-label{font-family:ui-monospace,'SF Mono','IBM Plex Mono',monospace;font-size:10.5px;color:var(--ink-soft);margin:10px 0 6px;letter-spacing:0.02em;}
+  .forest-row{display:flex;flex-wrap:wrap;gap:5px;min-height:24px;}
+  .forest-row svg{width:22px;height:22px;flex-shrink:0;}
+  .session-body{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:0 10px;}
+  .session-body .stitle{font-size:15px;font-weight:600;margin:0 0 4px;}
+  .session-body .ssub{font-size:12.5px;color:var(--ink-soft);margin:0 0 24px;line-height:1.5;}
+  .tree-grow{--grow:0.15;transform:scale(var(--grow));transform-origin:center bottom;transition:transform 1s ease-out;margin-bottom:20px;}
+  .tree-breathe{animation:breathe 4s ease-in-out infinite;}
+  @keyframes breathe{0%,100%{transform:scale(1);}50%{transform:scale(1.045);}}
+  @media (prefers-reduced-motion: reduce){.tree-breathe{animation:none;}}
+  .session-timer{font-family:ui-monospace,'SF Mono','IBM Plex Mono',monospace;font-size:20px;font-weight:500;margin:0 0 22px;color:var(--ink-soft);}
+  .session-end{background:var(--line);color:var(--ink);border:none;border-radius:14px;padding:11px 22px;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;transition:transform 0.1s;}
+  .session-end:active{transform:scale(0.97);}
+  .rest-toggle{background:none;border:none;font-family:inherit;font-size:12.5px;font-weight:600;color:var(--brass-deep);padding:6px 0 10px;cursor:pointer;text-align:left;}
+  .today-list-hidden{display:none;}
+  .ambient-link{display:flex;align-items:center;gap:8px;background:none;border:none;padding:8px 0;margin-top:auto;font-family:inherit;font-size:12.5px;color:var(--ink-soft);cursor:pointer;width:100%;text-align:left;}
+  .ambient-link svg{width:18px;height:18px;flex-shrink:0;}
+  .ambient-link .chev{margin-left:auto;width:14px;height:14px;opacity:0.6;}
+
+  .action-row{display:flex;gap:22px;justify-content:center;margin-top:auto;padding-top:4px;}
+  .circle-btn{display:flex;flex-direction:column;align-items:center;gap:6px;background:none;border:none;cursor:pointer;font-family:inherit;padding:0;transition:transform 0.1s;}
+  .circle-btn:active{transform:scale(0.93);}
+  .circle{width:64px;height:64px;border-radius:50%;background:var(--paper-screen);border:1px solid var(--line);display:flex;align-items:center;justify-content:center;box-shadow:0 4px 12px var(--shadow);}
+  .circle.primary{background:var(--brass-tint);}
+  .circle-btn span{font-size:11.5px;font-weight:600;color:var(--ink-soft);}
+  .quick-chips{margin:2px 0 0;}
+  .quick-chip{display:inline-block;margin:4px 6px 0 0;padding:6px 12px;background:var(--brass-tint);color:var(--brass-deep);border:none;border-radius:12px;font-size:11.5px;font-weight:600;cursor:pointer;font-family:inherit;}
+  .msg.system{align-self:center;background:none;color:var(--ink-soft);font-size:11.5px;font-style:italic;padding:2px 8px;}
+  .chat-overlay{position:absolute;inset:0;background:var(--paper-screen);border-radius:40px;display:none;flex-direction:column;z-index:30;}
+  .chat-overlay.open{display:flex;}
+  .chat-header{display:flex;align-items:center;gap:10px;padding:18px 16px 12px;border-bottom:1px solid var(--line);}
+  .chat-header .cname{font-size:14px;font-weight:600;flex:1;}
+  .chat-close{background:none;border:none;color:var(--ink-soft);cursor:pointer;padding:4px;display:flex;}
+  .chat-body{flex:1;overflow-y:auto;padding:14px 16px;display:flex;flex-direction:column;gap:10px;}
+  .msg{max-width:78%;padding:9px 13px;border-radius:16px;font-size:13.5px;line-height:1.4;}
+  .msg.bot{background:var(--line);align-self:flex-start;border-bottom-left-radius:4px;}
+  .msg.user{background:var(--brass);color:#fff;align-self:flex-end;border-bottom-right-radius:4px;}
+  .msg.typing{background:var(--line);align-self:flex-start;color:var(--ink-soft);font-style:italic;}
+  .chat-demo-note{font-size:10px;color:var(--ink-soft);text-align:center;padding:0 16px 8px;}
+  .chat-input-row{display:flex;gap:8px;padding:0 16px 16px;}
+  .chat-input-row input{flex:1;border:1px solid var(--line);border-radius:14px;padding:10px 14px;font-family:inherit;font-size:13.5px;background:var(--paper-outer);color:var(--ink);}
+  .chat-send{background:var(--brass);color:#fff;border:none;border-radius:14px;padding:0 16px;font-family:inherit;font-weight:600;font-size:13px;cursor:pointer;}
+
+  .greet-row{display:flex;gap:10px;align-items:flex-start;margin-bottom:16px;}
+  .greet-row svg{flex-shrink:0;border-radius:50%;}
+  .greet-bubble{background:var(--paper-outer);border-radius:18px;border-top-left-radius:4px;padding:10px 13px;flex:1;}
+  .gname{font-size:11px;font-weight:700;color:var(--brass-deep);margin:0 0 2px;letter-spacing:0.02em;}
+  .gtext{font-size:12.5px;line-height:1.4;margin:0;}
+  .add-btn{width:100%;background:var(--paper-screen);border:1.5px dashed var(--line-strong);border-radius:14px;padding:11px;font-family:inherit;font-size:12.5px;font-weight:600;color:var(--brass-deep);cursor:pointer;margin-bottom:14px;}
+  .type-chip{background:var(--line);color:var(--ink-soft);}
+  .type-chip.active{background:var(--brass);color:#fff;}
+  .field-label{font-family:ui-monospace,'SF Mono','IBM Plex Mono',monospace;font-size:10.5px;color:var(--ink-soft);margin:14px 0 6px;letter-spacing:0.02em;}
+  .field-input{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:12px;font-family:inherit;font-size:13.5px;background:var(--paper-outer);color:var(--ink);box-sizing:border-box;}
+  .break-btn{flex:1;background:none;border:none;padding:7px 4px;border-radius:9px;font-family:inherit;font-size:13px;font-weight:500;color:var(--ink-soft);cursor:pointer;transition:transform 0.1s;}
+  .break-btn.active{background:var(--paper-screen);color:var(--ink);box-shadow:0 1px 4px var(--shadow);}
+  .break-btn:active{transform:scale(0.97);}
+
+  .focus-subject{display:inline-block;font-size:10.5px;font-weight:700;color:var(--brass-deep);background:rgba(180,117,42,0.14);padding:2px 8px;border-radius:6px;margin:0 0 6px;letter-spacing:0.02em;}
+
+  .course-chip{background:var(--line);color:var(--ink-soft);}
+  .subject-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;vertical-align:middle;}
+  .course-chip.active{background:var(--brass);color:#fff;}
+  .log-unit-btn{background:var(--line);color:var(--ink-soft);}
+  .general-subject-btn{background:var(--line);color:var(--ink-soft);}
+  .activity-type-btn{background:var(--line);color:var(--ink-soft);}
+  .activity-type-btn.active{background:var(--brass);color:#fff;}
+  .general-subject-btn.active{background:var(--brass);color:#fff;}
+  .log-unit-btn.active{background:var(--brass);color:#fff;}
+  .rest-btn{flex:1;background:none;border:none;padding:7px 4px;border-radius:9px;font-family:inherit;font-size:13px;font-weight:500;color:var(--ink-soft);cursor:pointer;transition:transform 0.1s;}
+  .rest-btn.active{background:var(--paper-screen);color:var(--ink);box-shadow:0 1px 4px var(--shadow);}
+  .rest-btn:active{transform:scale(0.97);}
+
+  .eod-card{display:none;gap:10px;align-items:flex-start;background:var(--moss-tint);border-radius:16px;padding:12px 14px;margin-bottom:14px;}
+  .eod-card svg{flex-shrink:0;border-radius:50%;margin-top:2px;}
+  .eod-tag{font-size:10.5px;font-weight:700;color:var(--moss);margin:0 0 3px;letter-spacing:0.02em;}
+  .eod-text{font-size:12.5px;line-height:1.4;margin:0;}
+  .task-row{cursor:pointer;}
+  .eod-btn{flex:1;background:none;border:none;padding:7px 4px;border-radius:9px;font-family:inherit;font-size:13px;font-weight:500;color:var(--ink-soft);cursor:pointer;transition:transform 0.1s;}
+  .nextstep-btn{flex:1;background:none;border:none;padding:7px 4px;border-radius:9px;font-family:inherit;font-size:13px;font-weight:500;color:var(--ink-soft);cursor:pointer;transition:transform 0.1s;}
+  .nextstep-btn.active{background:var(--paper-screen);color:var(--ink);box-shadow:0 1px 4px var(--shadow);}
+  .eod-btn.active{background:var(--paper-screen);color:var(--ink);box-shadow:0 1px 4px var(--shadow);}
+  .eod-btn:active{transform:scale(0.97);}
+
+  .tips-btn{flex:1;background:none;border:none;padding:7px 4px;border-radius:9px;font-family:inherit;font-size:13px;font-weight:500;color:var(--ink-soft);cursor:pointer;transition:transform 0.1s;}
+  .tips-btn.active{background:var(--paper-screen);color:var(--ink);box-shadow:0 1px 4px var(--shadow);}
+  .tips-btn:active{transform:scale(0.97);}
+  .tip-card{border:1px solid var(--line);border-radius:18px;padding:10px 12px;margin-bottom:8px;}
+  .tip-card .tname{font-size:13px;font-weight:600;margin:0 0 3px;}
+  .tip-card .twhy{font-size:11.5px;color:var(--ink-soft);margin:0;line-height:1.4;}
+
+  .tips-hint{font-size:11px;color:var(--ink-soft);font-style:italic;margin:0 0 8px;}
+  .confetti-piece{position:fixed;top:-16px;width:8px;height:14px;z-index:9999;pointer-events:none;border-radius:2px;animation:confetti-fall linear forwards;}
+  @keyframes confetti-fall{0%{transform:translateY(0) rotate(0deg);opacity:1;}100%{transform:translateY(105vh) rotate(600deg);opacity:0.2;}}
+  .log-toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(10px);background:var(--ink);color:#fff;padding:10px 18px;border-radius:14px;font-size:12.5px;font-weight:600;z-index:9998;opacity:0;transition:opacity 0.25s,transform 0.25s;pointer-events:none;max-width:80%;text-align:center;}
+  .log-toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+  .field-input.small{margin-bottom:8px;}
+
+  .fun-btn{display:block;width:auto;margin:0 auto 16px;background:var(--brass);color:#fff;border:none;border-radius:999px;padding:13px 30px;font-family:inherit;font-size:13.5px;font-weight:600;cursor:pointer;box-shadow:0 5px 14px var(--shadow);transition:transform 0.1s;}
+  .fun-btn:active{transform:scale(0.95);}
+  .fp-money-note{font-size:10.5px;color:var(--ink-soft);font-style:italic;margin:2px 0 12px;}
+
+  .forest-row svg{width:auto;height:auto;}
+  .see-forest-link{background:none;border:none;font-family:inherit;font-size:11.5px;font-weight:600;color:var(--brass-deep);cursor:pointer;padding:2px 0;margin-bottom:2px;}
+  .forest-grid{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;align-items:flex-end;background:var(--paper-outer);border-radius:16px;padding:20px 14px;min-height:120px;margin-bottom:16px;}
+  .forest-legend{display:flex;justify-content:center;gap:14px;font-size:11px;color:var(--ink-soft);margin-bottom:18px;}
+  .shop-item{display:flex;align-items:center;gap:12px;border:1px solid var(--line);border-radius:14px;padding:10px 12px;margin-bottom:10px;}
+  .shop-item .sname{font-size:13.5px;font-weight:600;margin:0;}
+  .shop-item .sprice{font-size:11.5px;color:var(--ink-soft);margin:2px 0 0;}
+  .shop-buy{margin-left:auto;background:var(--brass);color:#fff;border:none;border-radius:10px;padding:7px 12px;font-family:inherit;font-size:12px;font-weight:600;cursor:pointer;}
+  .shop-buy.owned{background:var(--moss-tint);color:var(--moss);}
+
+  .nearest-box{background:var(--paper-screen);border:1px solid var(--line);border-radius:16px;padding:12px 14px;margin-bottom:16px;}
+  .theme-swatch{width:34px;height:34px;border-radius:50%;border:2px solid transparent;cursor:pointer;}
+  .theme-swatch.active{border-color:var(--ink);}
+  .length-card{border:1px solid var(--line-strong);border-radius:16px;padding:14px;margin-bottom:12px;display:flex;align-items:center;gap:14px;cursor:pointer;transition:transform 0.1s;background:var(--paper-screen);}
+  .length-card:active{transform:scale(0.98);}
+  .length-card .lname{font-size:14.5px;font-weight:600;margin:0 0 2px;}
+  .length-card .lsub{font-size:12px;color:var(--ink-soft);margin:0;}
+
+  .examcd-btn{flex:1;background:none;border:none;padding:7px 4px;border-radius:9px;font-family:inherit;font-size:13px;font-weight:500;color:var(--ink-soft);cursor:pointer;transition:transform 0.1s;}
+  .examcd-btn.active{background:var(--paper-screen);color:var(--ink);box-shadow:0 1px 4px var(--shadow);}
+  .examcd-btn:active{transform:scale(0.97);}
+
+  .mini-forest{display:flex;gap:4px;margin-bottom:5px;}
+  .mini-forest svg{width:17px;height:17px;flex-shrink:0;}
+
+  .week-forest-scene{background:var(--paper-outer);border-radius:16px;padding:16px 10px 0;margin-bottom:8px;}
+  .week-row{display:flex;justify-content:space-between;align-items:flex-end;padding-bottom:8px;border-bottom:3px solid var(--moss);gap:2px;}
+  .week-col{display:flex;flex-direction:column;align-items:center;flex:1;min-width:0;}
+  .week-trees{display:flex;flex-wrap:wrap;justify-content:center;align-items:flex-end;gap:2px;min-height:26px;}
+  .week-empty{color:var(--line-strong);font-size:18px;line-height:1;}
+  .week-label{font-size:9px;color:var(--ink-soft);margin:6px 0 12px;}
+
+  .thermo-wrap{position:relative;width:46px;height:46px;margin:0 auto 8px;}
+  .thermo-wrap svg{position:absolute;top:0;left:0;}
+  .garden-grid{display:flex;gap:6px;justify-content:center;margin-bottom:8px;}
+  .garden-tile{width:22px;height:22px;border-radius:6px;}
+  .garden-tile.filled{background:var(--moss);}
+  .garden-tile.empty{background:none;border:1.5px solid var(--line-strong);}
+
+  .gquote{font-size:11.5px;font-style:italic;color:var(--brass-deep);margin:6px 0 0;padding-top:6px;border-top:1px solid var(--line);}
+  .quote-btn{flex:1;background:none;border:none;padding:7px 4px;border-radius:9px;font-family:inherit;font-size:13px;font-weight:500;color:var(--ink-soft);cursor:pointer;transition:transform 0.1s;}
+  .quote-btn.active{background:var(--paper-screen);color:var(--ink);box-shadow:0 1px 4px var(--shadow);}
+  .quote-btn:active{transform:scale(0.97);}
+  .goal-tree-wrap{position:relative;width:90px;height:90px;margin:0 auto 10px;}
+  .goal-tree-wrap svg{position:absolute;top:0;left:0;}
+  .note{font-size:12px;color:var(--ink-soft);border-top:1px solid var(--line);padding-top:12px;margin-top:auto;line-height:1.5;}
+</style>
+</head>
+<body>
+  <div class="log-toast" id="log-toast"></div>
+  <div class="intro">
+    <p class="wordmark">KOMPASS · laget for Dina</p>
+    <h1>Studiestøtte for hoder som hopper</h1>
+    <p>Interaktiv skisse. Trykk på fanene nederst i telefonen.</p>
+  </div>
+  <div class="phone">
+    <div class="phone-screen">
+      <div class="island"></div>
+      <div class="statusbar"><span>9:41</span><span></span></div>
+      <p class="app-header">KOMPASS</p>
+
+      <div class="screen active" id="screen-today">
+        <div class="greet-row">
+          <svg id="greet-avatar" viewBox="0 0 40 40" width="36" height="36"></svg>
+          <div class="greet-bubble">
+            <p class="gname" id="greet-name">Rune</p>
+            <p class="gtext" id="greet-text">Bra jobbet med refleksjonsnotatet i går. La oss ta i dag rolig, ett steg av gangen.</p>
+            <p class="gquote" id="greet-quote" style="display:none;"></p>
+          </div>
+        </div>
+        <p class="eyebrow"><span id="today-date">—</span></p>
+        <h2 class="screen-title">I dag</h2>
+        <div class="focus-card">
+          <p class="label">DAGENS FOKUS</p>
+          <p class="focus-subject" id="focus-subject">FORSKNINGSMETODE</p>
+          <p class="task" id="focus-text">Lese kapittel 4 før metode-forelesning</p>
+          <button class="see-forest-link" id="weekplan-open" style="margin:8px 0 0;">Oppdater kompasset</button>
+        </div>
+
+        <div style="display:flex;flex-direction:column;align-items:center;margin:26px 0 16px;">
+          <button id="compass-open" aria-label="Vis studiemetoden" style="width:64px;height:64px;border-radius:50%;background:var(--paper-outer);border:2px solid var(--brass);display:flex;align-items:center;justify-content:center;cursor:pointer;">
+            <svg viewBox="0 0 40 40" width="34" height="34"><circle cx="20" cy="20" r="17" fill="none" stroke="var(--brass-deep)" stroke-width="1.5"/><path d="M27 13 L18 18 L13 27 L22 22 Z" fill="var(--brass)"/><circle cx="20" cy="20" r="2" fill="var(--brass-deep)"/></svg>
+          </button>
+          <p class="csub" style="margin:8px 0 0;text-align:center;max-width:220px;">Usikker på hva du skal gjøre? Kompasset viser deg alltid de samme tre stegene.</p>
+        </div>
+
+        <div class="chat-overlay" id="compass-overlay">
+          <div class="chat-header">
+            <span class="cname">Studiemetoden</span>
+            <button class="chat-close" id="compass-close" aria-label="Lukk">
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+            </button>
+          </div>
+          <div style="padding:0 18px;overflow-y:auto;flex:1;">
+            <p class="csub" style="margin:4px 0 14px;line-height:1.5;">Ikke tenk på hva som er smartest å gjøre nå. Følg bare disse tre stegene, i rekkefølge, hver gang.</p>
+            <div class="tip-card"><p class="tname">1. Les</p><p class="twhy">Bare les. Ikke tenk at du skal huske alt — det kommer senere.</p></div>
+            <div class="tip-card"><p class="tname">2. Noter nøkkelord</p><p class="twhy">Skriv ned nøkkelord, teorier og modeller du kommer over, uten å analysere for mye.</p></div>
+            <div class="tip-card"><p class="tname">3. Skriv din egen versjon</p><p class="twhy">For hver ting du har notert: skriv definisjonen, ett eget eksempel, og en enkel "basically"-setning som forklarer det med dine egne ord.</p></div>
+            <div class="tip-card" style="background:var(--brass-tint);"><p class="tname">Bruk AI til steg 3</p><p class="twhy">Spør en KI-modell: "Gi meg 10 eksempler og 10 'basically'-formuleringer for [begrepet]." Bruk svarene til å komme raskere i gang med egne versjoner.</p></div>
+            <p class="csub" id="compass-exam-note" style="display:none;margin-top:4px;"></p>
+          </div>
+          <div style="padding:14px 18px 18px;">
+            <button class="cta" id="compass-close-btn" style="margin-top:0;">Lukk</button>
+          </div>
+        </div>
+
+        <div class="chat-overlay" id="weekplan-overlay">
+          <div class="chat-header">
+            <span class="cname">Planlegg uken</span>
+            <button class="chat-close" id="weekplan-close" aria-label="Lukk">
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+            </button>
+          </div>
+          <div style="padding:0 18px;overflow-y:auto;flex:1;">
+            <p class="csub" style="margin:4px 0 14px;">Velg hvilket fag du vil ha fokus på hver dag — eller merk dagen som fridag. Ingen krav om å fylle ut alle.</p>
+            <div id="weekplan-list"></div>
+            <button class="see-forest-link" id="quick-subject-open" style="margin:4px 0 6px;">+ Legg til fokusområde</button>
+            <div id="quick-subject-row" style="display:none;margin-bottom:14px;">
+              <p class="csub" style="margin:0 0 6px;">Kan være et fag, en bacheloroppgave, praksis, eller et annet fokusområde du vil ha oversikt over — ikke bare klassiske skolefag.</p>
+              <input type="text" id="quick-subject-input" class="field-input" placeholder="F.eks. Forskningsmetode, Bacheloroppgave, Praksis" style="margin-bottom:6px;">
+              <button class="quick-chip" id="quick-subject-confirm" type="button" style="background:var(--brass);color:#fff;">Legg til</button>
+            </div>
+          </div>
+          <div style="padding:14px 18px 18px;">
+            <button class="cta" id="weekplan-done" style="margin-top:0;">Ferdig</button>
+          </div>
+        </div>
+
+        <button class="fun-btn" id="progress-log-open">Jeg har gjort noe!</button>
+
+        <div class="chat-overlay" id="progress-log-overlay">
+          <div class="chat-header">
+            <span class="cname">Registrer handling</span>
+            <button class="chat-close" id="progress-log-close" aria-label="Lukk">
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+            </button>
+          </div>
+          <div style="padding:0 18px;overflow-y:auto;flex:1;" id="progress-log-list"></div>
+        </div>
+
+        <div class="focus-progress">
+          <div class="fp-header"><span>Din skog</span></div>
+          <div class="forest-row" id="forest-row"></div>
+          <p class="fp-sub" id="fp-sub-text">3 trær — spire</p>
+          <div class="progress-strip" style="margin:6px 0 4px;"><div id="stage-bar" style="width:30%"></div></div>
+          <p class="csub" id="stage-next" style="margin:0 0 8px;">3 til ung lund</p>
+          <button class="see-forest-link" id="see-forest-link">Se hele skogen →</button>
+          <p class="tips-hint" style="margin-top:2px;">Nye trær legges til automatisk når du fullfører en ekte fokusøkt under.</p>
+        </div>
+        <div class="eod-card" id="eod-card">
+          <svg id="eod-avatar" viewBox="0 0 40 40" width="28" height="28"></svg>
+          <div>
+            <p class="eod-tag" id="eod-tag">DU HAR FORTJENT NOE</p>
+            <p class="eod-text" id="eod-text"></p>
+          </div>
+        </div>
+        <div class="action-row">
+          <button class="circle-btn" id="open-length-btn" aria-label="Velg lengde og start fokusøkt">
+            <div class="circle">
+              <svg viewBox="0 0 100 100" width="30" height="30"><circle cx="35" cy="45" r="20" fill="var(--moss)"/><circle cx="65" cy="45" r="20" fill="var(--moss)"/><circle cx="50" cy="30" r="22" fill="var(--moss)"/><rect x="46" y="60" width="8" height="32" rx="3" fill="var(--brass-deep)"/></svg>
+            </div>
+            <span>Fokusøkt</span>
+          </button>
+          <button class="circle-btn" id="fab-btn" aria-label="Snakk med støttekontakt">
+            <div class="circle primary">
+              <svg id="fab-avatar" viewBox="0 0 40 40" width="30" height="30"></svg>
+            </div>
+            <span>Sparre</span>
+          </button>
+        </div>
+
+        <div class="chat-overlay" id="length-overlay">
+          <div class="chat-header">
+            <span class="cname">Velg lengde</span>
+            <button class="chat-close" id="length-close" aria-label="Lukk">
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+            </button>
+          </div>
+          <div style="padding:4px 18px 18px;overflow-y:auto;flex:1;" id="length-list"></div>
+        </div>
+
+        <div class="chat-overlay" id="chapter-popup">
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;">
+            <svg viewBox="0 0 100 100" width="70" height="70"><circle cx="35" cy="45" r="20" fill="var(--moss)"/><circle cx="65" cy="45" r="20" fill="var(--moss)"/><circle cx="50" cy="30" r="22" fill="var(--moss)"/><rect x="46" y="60" width="8" height="32" rx="3" fill="var(--brass-deep)"/></svg>
+            <p style="font-size:16px;font-weight:600;margin:16px 0 6px;">Nytt kapittel unnagjort!</p>
+            <p class="csub" style="margin:0 0 20px;">Du har lest deg gjennom enda en del av pensumet. Bra jobbet — fortsett i ditt eget tempo.</p>
+            <button class="cta" id="chapter-popup-close" style="margin-top:0;width:auto;padding:10px 28px;">Fortsett</button>
+          </div>
+        </div>
+
+        <div class="chat-overlay" id="welcome-overlay">
+          <div class="chat-header">
+            <span class="cname">Kom i gang med Kompass</span>
+            <button class="chat-close" id="welcome-close" aria-label="Lukk">
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+            </button>
+          </div>
+          <div style="padding:0 18px;overflow-y:auto;flex:1;">
+            <p style="font-size:17px;font-weight:600;margin:10px 0 6px;">Velkommen til Kompass, Dina</p>
+            <p class="csub" style="margin:0 0 18px;line-height:1.5;">Din personlige veileder og støttekontakt gjennom en hektisk, og til tider uoversiktlig, studiehverdag. La oss vinne dette semesteret sammen!</p>
+            <p class="csub" style="margin:4px 0 14px;">Noen få steg, så er alt klart:</p>
+            <div class="tip-card"><p class="tname">1. Legg til arbeidskrav for høsten</p><p class="twhy">Bruk "+ Legg til" på Plan-fanen for hvert arbeidskrav du kjenner til.</p></div>
+            <div class="tip-card"><p class="tname">2. Legg til eksamensdatoer</p><p class="twhy">Samme sted — velg "Eksamen" som type.</p></div>
+            <div class="tip-card"><p class="tname">3. Legg til pensum</p><p class="twhy">Boktittel, forfatter og sidetall, så vet appen hva du har igjen å lese.</p></div>
+            <div class="tip-card"><p class="tname">4. Sett en frist for gjennomlesning</p><p class="twhy">Når vil du helst være ferdig med pensumet ditt?</p></div>
+            <div class="tip-card"><p class="tname">5. Velg din støttekontakt</p><p class="twhy">Fire ulike personligheter under Støtte — velg den som passer best for deg akkurat nå.</p></div>
+          </div>
+          <div style="padding:14px 18px 18px;">
+            <button class="cta" id="welcome-done" style="margin-top:0;">Kom i gang</button>
+          </div>
+        </div>
+
+        <div class="chat-overlay" id="chat-overlay">
+          <div class="chat-header">
+            <svg id="chat-avatar-icon" viewBox="0 0 40 40" width="32" height="32"></svg>
+            <span class="cname" id="chat-avatar-name">Rune</span>
+            <button class="chat-close" id="chat-close" aria-label="Lukk">
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+            </button>
+          </div>
+          <div class="chat-body" id="chat-body">
+            <div class="msg bot">Hei! Jeg er her når du trenger noen å tenke høyt sammen med — jeg kan også faktisk gjøre endringer i planen din, ikke bare snakke. Hva sitter du med?</div>
+            <div class="quick-chips">
+              <button class="quick-chip" id="chip-remove">Fjern en oppgave</button>
+              <button class="quick-chip" id="chip-break">Legg inn en pause</button>
+            </div>
+          </div>
+          <p class="chat-demo-note">Demo-svar her — kobles til en ekte AI-modell i den virkelige appen</p>
+          <div class="chat-input-row">
+            <input type="text" id="chat-input" placeholder="Skriv en melding">
+            <button class="chat-send" id="chat-send">Send</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="screen" id="screen-session">
+        <div class="session-body">
+          <p class="stitle">Økt pågår</p>
+          <p class="ssub">Legg telefonen fra deg.<br>Treet vokser mens du er borte.</p>
+          <div class="tree-grow" id="tree-grow">
+            <svg class="tree-breathe" viewBox="0 0 100 100" width="140" height="140">
+              <circle cx="35" cy="45" r="20" fill="var(--moss)"/>
+              <circle cx="65" cy="45" r="20" fill="var(--moss)"/>
+              <circle cx="50" cy="30" r="22" fill="var(--moss)"/>
+              <rect x="46" y="60" width="8" height="32" rx="3" fill="var(--brass-deep)"/>
+            </svg>
+          </div>
+          <p class="session-timer" id="session-timer">00:00</p>
+          <button class="session-end" id="end-session-btn">Avslutt økt</button>
+        </div>
+      </div>
+
+      <div class="screen" id="screen-break">
+        <div class="session-body">
+          <p class="stitle">Pause</p>
+          <p class="ssub" id="break-ssub">Bare et forslag — gjør det som funker for deg.</p>
+          <div class="tip-card" id="break-tip-preview" style="text-align:left;max-width:230px;"></div>
+          <p class="session-timer" id="break-timer" style="margin-top:16px;">05:00</p>
+          <button class="session-end" id="skip-break-btn">Avslutt pause</button>
+        </div>
+      </div>
+
+      <div class="screen" id="screen-plan">
+        <p class="eyebrow">SEMESTER 2026 HØST</p>
+        <h2 class="screen-title">Fag og frister</h2>
+        <div class="focus-progress">
+          <div class="fp-header"><span>Dine fag</span><span class="csub" style="font-weight:400;">Trykk for detaljer</span></div>
+          <div class="course-list" id="course-list"></div>
+        </div>
+        <button class="add-btn" id="add-open">+ Legg til pensum, eksamen, arbeidskrav eller forelesning</button>
+        <div class="focus-progress">
+          <div class="fp-header"><span>Nærmeste frister</span></div>
+          <div id="nearest-box"></div>
+          <div id="quick-deadline-row" style="display:none;margin-top:8px;">
+            <input type="text" id="quick-deadline-title" class="field-input" placeholder="Tittel, f.eks. Innlevering rapport" style="margin-bottom:6px;">
+            <input type="date" id="quick-deadline-date" class="field-input" style="margin-bottom:6px;">
+            <button class="quick-chip" id="quick-deadline-confirm" type="button" style="background:var(--brass);color:#fff;">Legg til</button>
+          </div>
+        </div>
+        <div class="focus-progress" id="exam-countdown-wrap">
+          <div class="fp-header"><span>Eksamen-nedtelling</span></div>
+          <div id="exam-box"></div>
+        </div>
+      </div>
+
+      <div class="chat-overlay" id="course-detail-overlay">
+        <div class="chat-header">
+          <span class="cname" id="course-detail-title">Fag</span>
+          <button class="chat-close" id="course-detail-close" aria-label="Lukk">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+          </button>
+        </div>
+        <div style="padding:0 18px;overflow-y:auto;flex:1;">
+          <p class="csub" id="course-detail-progress" style="margin-bottom:8px;"></p>
+          <p class="field-label" style="margin-top:0;">FARGE PÅ FAGET</p>
+          <div id="course-color-picker" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px;"></div>
+          <div id="course-detail-list"></div>
+        </div>
+      </div>
+
+      <div class="chat-overlay" id="forest-overlay">
+        <div class="chat-header">
+          <span class="cname">Din skog</span>
+          <button class="chat-close" id="forest-close" aria-label="Lukk">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+          </button>
+        </div>
+        <div style="padding:0 18px;overflow-y:auto;flex:1;">
+          <p class="field-label" style="margin-top:4px;">SISTE 7 DAGER</p>
+          <div class="week-forest-scene">
+            <div class="week-row" id="week-forest"></div>
+          </div>
+          <p class="field-label">HELE SKOGEN DIN</p>
+          <div class="forest-grid" id="forest-grid"></div>
+          <div class="forest-legend">
+            <span>🌱 25 min</span><span>🌿 45 min</span><span>🌳 60 min</span>
+          </div>
+          <p class="field-label" style="margin-top:0;">VELG TRESLAG FOR NESTE TRE</p>
+          <div id="species-picker" style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:16px;"></div>
+          <p class="field-label" style="margin-top:0;">SPESIELLE TRÆR</p>
+          <div id="shop-list"></div>
+          <p class="tips-hint">Rent kosmetisk — endrer ikke rabatten din, bare hvordan skogen ser ut.</p>
+        </div>
+      </div>
+
+      <div class="chat-overlay" id="add-overlay">
+        <div class="chat-header">
+          <span class="cname">Legg til</span>
+          <button class="chat-close" id="add-close" aria-label="Lukk">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+          </button>
+        </div>
+        <div style="padding:0 18px;overflow-y:auto;flex:1;">
+          <p class="field-label" style="margin-top:4px;">TYPE</p>
+          <div>
+            <button class="quick-chip type-chip active" data-type="Pensum">Pensum</button>
+            <button class="quick-chip type-chip" data-type="Eksamen">Eksamen</button>
+            <button class="quick-chip type-chip" data-type="Arbeidskrav">Arbeidskrav</button>
+            <button class="quick-chip type-chip" data-type="Forelesning">Forelesning</button>
+          </div>
+          <p class="field-label">FAG</p>
+          <div id="course-chips"></div>
+          <div id="new-subject-row" style="display:none;margin-top:8px;">
+            <input type="text" id="new-subject-input" class="field-input" placeholder="Navn på nytt fag" style="margin-bottom:6px;">
+            <button class="quick-chip" id="new-subject-confirm" type="button" style="background:var(--brass);color:#fff;">Legg til fag</button>
+          </div>
+          <div id="f1-wrap"><p class="field-label" id="f1-label">TOTALT ANTALL SIDER</p>
+          <input type="text" id="add-f1" class="field-input" placeholder="F.eks. Kapittel 4, s. 88–112"></div>
+          <div id="f2-wrap"><p class="field-label" id="f2-label">FRIST FOR GJENNOMLESNING</p>
+          <input type="text" id="add-f2" class="field-input"></div>
+          <div id="f3-wrap" style="display:none;"><p class="field-label" id="f3-label">FELT 3</p>
+          <input type="text" id="add-f3" class="field-input" placeholder=""></div>
+          <div id="f4-wrap" style="display:none;"><p class="field-label" id="f4-label">FELT 4</p>
+          <input type="text" id="add-f4" class="field-input" placeholder=""></div>
+        </div>
+        <div style="padding:14px 18px 18px;">
+          <button class="cta" id="add-save" style="margin-top:0;">Legg til</button>
+        </div>
+      </div>
+
+      <div class="screen" id="screen-support">
+        <p class="eyebrow">DIN STØTTEKONTAKT</p>
+        <h2 class="screen-title">Velg avatar</h2>
+        <div class="avatar-grid">
+          <div class="avatar-card selected" data-avatar="rune">
+            <span class="check">✓</span>
+            <svg class="face" viewBox="0 0 40 40" width="40" height="40"><circle cx="20" cy="20" r="20" fill="#B4752A"/><circle cx="14" cy="17" r="2" fill="#1C1B18"/><circle cx="26" cy="17" r="2" fill="#1C1B18"/><path d="M13 25 Q20 29 27 25" stroke="#1C1B18" stroke-width="2" fill="none" stroke-linecap="round"/></svg>
+            <p class="aname">Rune</p>
+            <p class="atag">Rolig og systematisk</p>
+          </div>
+          <div class="avatar-card" data-avatar="live">
+            <span class="check">✓</span>
+            <svg class="face" viewBox="0 0 40 40" width="40" height="40"><circle cx="20" cy="20" r="20" fill="#5B6B4A"/><circle cx="14" cy="17" r="2" fill="#FBF8F2"/><circle cx="26" cy="17" r="2" fill="#FBF8F2"/><path d="M12 24 Q20 32 28 24" stroke="#FBF8F2" stroke-width="2" fill="none" stroke-linecap="round"/></svg>
+            <p class="aname">Live</p>
+            <p class="atag">Energisk og heiende</p>
+          </div>
+          <div class="avatar-card" data-avatar="vilde">
+            <span class="check">✓</span>
+            <svg class="face" viewBox="0 0 40 40" width="40" height="40"><circle cx="20" cy="20" r="20" fill="#7C8FA6"/><circle cx="14" cy="17" r="2" fill="#1C1B18"/><circle cx="26" cy="17" r="2" fill="#1C1B18"/><path d="M14 25 Q20 28 26 25" stroke="#1C1B18" stroke-width="2" fill="none" stroke-linecap="round"/></svg>
+            <p class="aname">Vilde</p>
+            <p class="atag">Rolig, varm og skånsom</p>
+          </div>
+          <div class="avatar-card" data-avatar="daniel">
+            <span class="check">✓</span>
+            <svg class="face" viewBox="0 0 40 40" width="40" height="40"><circle cx="20" cy="20" r="20" fill="#A6667C"/><circle cx="14" cy="17" r="2" fill="#FBF8F2"/><circle cx="26" cy="17" r="2" fill="#FBF8F2"/><path d="M13 24 Q20 31 27 24" stroke="#FBF8F2" stroke-width="2" fill="none" stroke-linecap="round"/></svg>
+            <p class="aname">Daniel</p>
+            <p class="atag">Direkte, planmessig og stoisk</p>
+          </div>
+        </div>
+        <p class="note" style="margin-bottom:18px;">Alle avatarer er originale figurer laget for Kompass — ikke ekte personer eller kjendiser. Vil du heller ha en ekte venn eller partner som din støttekontakt, kan du invitere dem inn under innstillinger.</p>
+        <p class="eyebrow">INNSTILLING</p>
+        <h2 class="screen-title" style="font-size:16px;margin-bottom:6px;">Kveldsmelding</h2>
+        <div class="mode-toggle">
+          <button class="eod-btn active" data-eod="on">På</button>
+          <button class="eod-btn" data-eod="off">Av</button>
+        </div>
+        <p class="note" style="border-top:none;padding-top:0;margin-top:8px;margin-bottom:18px;">Fra kl. 18:00 gir avataren din en liten personlig melding for dagen — tips, komplimenter, et forslag til belønning eller noe helt annet, avhengig av hvem du valgte.</p>
+      </div>
+
+      <div class="screen" id="screen-upgrade">
+        <p class="eyebrow">INNSTILLINGER</p>
+        <h2 class="screen-title" style="font-size:16px;margin-bottom:6px;">Aktivitetslogg</h2>
+        <p class="note" style="border-top:none;padding-top:0;margin-top:0;margin-bottom:10px;">Alt du har registrert under "Jeg har gjort noe," nyeste øverst. Bla nedover for å se hva ting vanligvis tar av tid for deg.</p>
+        <div id="activity-log-list" style="max-height:280px;overflow-y:auto;margin-bottom:18px;"></div>
+        <h2 class="screen-title" style="font-size:16px;margin-bottom:10px;">Din pause-rytme</h2>
+        <p class="field-label" style="margin-top:0;">ARBEID</p>
+        <div class="mode-toggle">
+          <button class="break-btn active" data-break="25">25 min</button>
+          <button class="break-btn" data-break="45">45 min</button>
+          <button class="break-btn" data-break="60">60 min</button>
+        </div>
+        <p class="field-label">PAUSE</p>
+        <div class="mode-toggle" id="rest-toggle-group"></div>
+        <p class="note" style="border-top:none;padding-top:0;margin-top:8px;margin-bottom:14px;" id="break-feedback">25 minutter arbeid og 5 minutter pause er en god start hvis konsentrasjonen ofte glipper tidlig. Kjenn etter denne uken — vi finner riktig rytme sammen, ikke det som "burde" funke.</p>
+        <p class="field-label" style="margin-top:0;">TIPS TIL PAUSEN</p>
+        <div class="mode-toggle">
+          <button class="tips-btn active" data-tips="on">På</button>
+          <button class="tips-btn" data-tips="off">Av</button>
+        </div>
+        <p class="tips-hint">Bare forslag — du velger fritt, og kan alltid bare gjøre det du har lyst til.</p>
+        <div id="break-tips-list" style="margin-top:6px;margin-bottom:18px;"></div>
+        <h2 class="screen-title" style="font-size:16px;margin-bottom:6px;">Eksamen-nedtelling</h2>
+        <div class="mode-toggle">
+          <button class="examcd-btn active" data-examcd="on">På</button>
+          <button class="examcd-btn" data-examcd="off">Av</button>
+        </div>
+        <p class="note" style="border-top:none;padding-top:0;margin-top:8px;margin-bottom:18px;">Viser antall dager igjen til hver eksamen øverst i "Plan". Kjenner du at det stresser mer enn det hjelper, er det bare å skru den av.</p>
+        <h2 class="screen-title" style="font-size:16px;margin-bottom:6px;">Dagens quote</h2>
+        <div class="mode-toggle">
+          <button class="quote-btn active" data-quote="on">På</button>
+          <button class="quote-btn" data-quote="off">Av</button>
+        </div>
+        <p class="note" style="border-top:none;padding-top:0;margin-top:8px;margin-bottom:18px;">Viser en kort, egenprodusert refleksjon i avatarens hilsen på "I dag" — ingen sitater tilskrevet ekte personer.</p>
+        <div class="focus-progress">
+          <div class="fp-header"><span>Månedsmål</span></div>
+          <div class="goal-tree-wrap" id="goal-tree-wrap"></div>
+          <p class="fp-sub" id="goal-text" style="text-align:center;">0 av 100 timer denne måneden</p>
+        </div>
+        <p class="eyebrow">ABONNEMENT</p>
+        <h2 class="screen-title">Ditt abonnement</h2>
+        <div class="plan-card">
+          <p class="plan-name">Basic</p>
+          <p class="plan-price">0 kr<span> / mnd</span></p>
+          <ul class="plan-features">
+            <li>Én ferdig valgt støttekontakt</li>
+            <li>Ukeplanlegging for ett fag om gangen</li>
+            <li>Begrenset antall kroppsdobling-økter</li>
+          </ul>
+          <button class="plan-btn secondary">Velg Basic</button>
+        </div>
+        <div class="plan-card featured">
+          <span class="badge">MEST VALGT</span>
+          <p class="plan-name">Kompass+</p>
+          <p class="plan-price"><span class="price-old" id="kp-old">$9.99</span><span id="kp-price">$7.49</span><span> / mnd</span></p>
+          <ul class="plan-features">
+            <li>Alt i Basic</li>
+            <li>Velg og tilpass støttekontakt fritt</li>
+            <li>Ukeplanlegging for alle fagene dine</li>
+            <li>Ubegrenset kroppsdobling</li>
+            <li>Full aktivitetslogg og tempo-estimater</li>
+            <li>Tjen opptil 10% rabatt med fokusøkter</li>
+          </ul>
+          <button class="plan-btn primary">Nåværende plan</button>
+        </div>
+        <div class="plan-card">
+          <p class="plan-name">Premium</p>
+          <p class="plan-price">$24.99<span> / mnd</span></p>
+          <ul class="plan-features">
+            <li>Alt i Kompass+</li>
+            <li>Søvn- og motivasjonsinnhold</li>
+            <li>Daglige refleksjoner (egenproduserte)</li>
+            <li>Prioritert support</li>
+          </ul>
+          <button class="plan-btn secondary">Velg Premium</button>
+        </div>
+        <p class="eyebrow" style="margin-top:18px;">INNSTILLING</p>
+        <h2 class="screen-title" style="font-size:16px;margin-bottom:8px;">Appens farge</h2>
+        <div style="display:flex;flex-wrap:wrap;gap:12px;margin-bottom:8px;">
+          <button class="theme-swatch active" data-theme="brass" style="background:#B4752A;"></button>
+          <button class="theme-swatch" data-theme="teal" style="background:#3E7C74;"></button>
+          <button class="theme-swatch" data-theme="plum" style="background:#8B5A7A;"></button>
+          <button class="theme-swatch" data-theme="forest" style="background:#5C7A3E;"></button>
+          <button class="theme-swatch" data-theme="slate" style="background:#4A6280;"></button>
+          <button class="theme-swatch" data-theme="rust" style="background:#B5502F;"></button>
+          <button class="theme-swatch" data-theme="rose" style="background:#A6667C;"></button>
+          <button class="theme-swatch" data-theme="mono" style="background:#4A453D;"></button>
+        </div>
+        <p class="tips-hint" style="text-align:center;margin-top:24px;">Laget med ♥ av Daniel, kun til deg.</p>
+      </div>
+
+      <div class="tabbar">
+        <button class="tab active" data-screen="today">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8 12l3 3 5-6"/></svg>
+          I dag
+        </button>
+        <button class="tab" data-screen="plan">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="6" width="16" height="14" rx="3"/><path d="M4 10h16M8 4v4M16 4v4"/></svg>
+          Plan
+        </button>
+        <button class="tab" data-screen="support">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.5"/><path d="M5 20c0-4 3-6 7-6s7 2 7 6"/></svg>
+          Støtte
+        </button>
+        <button class="tab" data-screen="upgrade">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09a1.65 1.65 0 00-1-1.51 1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09a1.65 1.65 0 001.51-1 1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+          Innstillinger
+        </button>
+      </div>
+    </div>
+  </div><script>
+const data = {
+  student: {
+    courses: [],
+    plan: []
+  },
+  hverdag: {
+    courses: [],
+    plan: []
+  }
+};
+function todaysDateLabel(){
+  const days = ['SØNDAG','MANDAG','TIRSDAG','ONSDAG','TORSDAG','FREDAG','LØRDAG'];
+  const months = ['JAN','FEB','MAR','APR','MAI','JUN','JUL','AUG','SEP','OKT','NOV','DES'];
+  const now = new Date();
+  const d = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()));
+  const dayNum = d.getUTCDay() || 7;
+  d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(),0,1));
+  const weekNo = Math.ceil((((d - yearStart) / 86400000) + 1)/7);
+  return days[now.getDay()]+' '+now.getDate()+'. '+months[now.getMonth()]+' · UKE '+weekNo;
+}
+document.getElementById('today-date').textContent = todaysDateLabel();
+const subjectPalette = ['#B4752A','#3E7C74','#8B5A7A','#5C7A3E','#4A6280','#B5502F','#A6667C','#4A453D'];
+let currentMode = 'student';
+let activityLog = [];
+function logActivity(label, minutes){
+  if(!label || minutes <= 0) return;
+  activityLog.unshift({label:label, minutes:minutes});
+  renderActivityLog();
+}
+function renderActivityLog(){
+  const list = document.getElementById('activity-log-list');
+  if(!list) return;
+  list.innerHTML = activityLog.length ? activityLog.map(function(a){
+    return '<div class="deadline-row"><span class="name">'+a.label+'</span><span class="chip soon">'+formatMinutes(a.minutes)+'</span></div>';
+  }).join('') : '<p class="csub">Ingenting registrert ennå. Bruk "Jeg har gjort noe!" på "I dag" for å begynne å bygge oversikten.</p>';
+}
+let examCountdownOn = true;
+
+let weekPlan = {0:null,1:null,2:null,3:null,4:null,5:null,6:null};
+const weekdayNames = ['Søndag','Mandag','Tirsdag','Onsdag','Torsdag','Fredag','Lørdag'];
+function renderWeekPlanner(){
+  const courses = data[currentMode].courses;
+  const order = [1,2,3,4,5,6,0];
+  document.getElementById('weekplan-list').innerHTML = order.map(function(dayIdx){
+    const subjectChips = courses.map(function(c){
+      return '<button class="quick-chip type-chip weekplan-chip'+(weekPlan[dayIdx]===c.name?' active':'')+'" data-day="'+dayIdx+'" data-value="'+c.name+'">'+c.name+'</button>';
+    }).join('');
+    const friChip = '<button class="quick-chip weekplan-chip'+(weekPlan[dayIdx]==='fri'?' active':'')+'" data-day="'+dayIdx+'" data-value="fri" style="background:'+(weekPlan[dayIdx]==='fri'?'var(--moss)':'var(--moss-tint)')+';color:'+(weekPlan[dayIdx]==='fri'?'#fff':'var(--moss)')+';">Fridag</button>';
+    return '<div style="margin-bottom:14px;"><p class="field-label" style="margin-top:0;">'+weekdayNames[dayIdx].toUpperCase()+'</p><div>'+subjectChips+friChip+'</div></div>';
+  }).join('');
+  document.querySelectorAll('.weekplan-chip').forEach(function(chip){
+    chip.addEventListener('click', function(){
+      const day = parseInt(chip.dataset.day,10);
+      weekPlan[day] = weekPlan[day]===chip.dataset.value ? null : chip.dataset.value;
+      renderWeekPlanner();
+      renderMode();
+    });
+  });
+}
+document.getElementById('quick-subject-open').addEventListener('click', function(){
+  const row = document.getElementById('quick-subject-row');
+  row.style.display = row.style.display === 'none' ? 'block' : 'none';
+  if(row.style.display === 'block'){ document.getElementById('quick-subject-input').focus(); }
+});
+document.addEventListener('click', function(e){
+  if(e.target && e.target.id === 'quick-deadline-open'){
+    document.getElementById('quick-deadline-row').style.display = 'block';
+    document.getElementById('quick-deadline-title').focus();
+  }
+});
+document.getElementById('quick-deadline-confirm').addEventListener('click', function(){
+  const title = document.getElementById('quick-deadline-title').value.trim();
+  const dateVal = document.getElementById('quick-deadline-date').value;
+  if(!title || !dateVal) return;
+  const parts = dateVal.split('-');
+  const dateObj = new Date(parseInt(parts[0],10), parseInt(parts[1],10)-1, parseInt(parts[2],10));
+  const days = daysFromToday(dateObj);
+  const list = data[currentMode].plan;
+  let group = list.find(function(g){ return g.group === 'Andre frister'; });
+  if(!group){ group = {group:'Andre frister', items:[]}; list.unshift(group); }
+  group.items.unshift({name:title, chip:'soon', label:dateObj.toLocaleDateString('nb-NO'), days:days});
+  document.getElementById('quick-deadline-title').value = '';
+  document.getElementById('quick-deadline-date').value = '';
+  document.getElementById('quick-deadline-row').style.display = 'none';
+  renderMode();
+});
+document.getElementById('quick-subject-confirm').addEventListener('click', function(){
+  const input = document.getElementById('quick-subject-input');
+  const trimmed = input.value.trim();
+  if(!trimmed) return;
+  const autoColor = subjectPalette[data[currentMode].courses.length % subjectPalette.length];
+  data[currentMode].courses.push({name:trimmed, pct:0, sub:'Nettopp lagt til', next:'Ingen frister ennå', color:autoColor});
+  input.value = '';
+  document.getElementById('quick-subject-row').style.display = 'none';
+  renderMode();
+  renderWeekPlanner();
+});
+document.getElementById('weekplan-open').addEventListener('click', function(){
+  renderWeekPlanner();
+  document.getElementById('quick-subject-row').style.display = 'none';
+  document.getElementById('quick-subject-input').value = '';
+  document.getElementById('weekplan-overlay').classList.add('open');
+});
+document.getElementById('weekplan-close').addEventListener('click', function(){
+  document.getElementById('weekplan-overlay').classList.remove('open');
+});
+document.getElementById('weekplan-done').addEventListener('click', function(){
+  document.getElementById('weekplan-overlay').classList.remove('open');
+});
+function maybeShowWeeklyPlanner(){
+  if(new Date().getDay() === 0){
+    renderWeekPlanner();
+    document.getElementById('weekplan-overlay').classList.add('open');
+  }
+}
+maybeShowWeeklyPlanner();
+function deriveTodayFromPlan(d){
+  const flat = [];
+  d.plan.forEach(function(g){
+    g.items.forEach(function(item, idx){
+      flat.push({item:item, group:g.group, idx:idx});
+    });
+  });
+  flat.sort(function(a,b){
+    const aDone = a.item.chip==='done', bDone = b.item.chip==='done';
+    if(aDone !== bDone) return aDone ? 1 : -1;
+    const ad = typeof a.item.days==='number' ? a.item.days : 9999;
+    const bd = typeof b.item.days==='number' ? b.item.days : 9999;
+    return ad-bd;
+  });
+  return flat.slice(0,4);
+}
+document.getElementById('compass-open').addEventListener('click', function(){
+  const d = data[currentMode];
+  const todayPlan = weekPlan[new Date().getDay()];
+  const examNote = document.getElementById('compass-exam-note');
+  let examSoon = null;
+  if(todayPlan && todayPlan !== 'fri'){
+    const group = d.plan.find(function(g){ return g.group === todayPlan; });
+    if(group){
+      const exam = group.items.find(function(i){ return i.type==='Eksamen' && typeof i.days==='number' && i.days<=14; });
+      if(exam) examSoon = exam;
+    }
+  }
+  if(examSoon){
+    examNote.style.display = 'block';
+    examNote.textContent = 'Eksamen i '+todayPlan+' er om '+examSoon.days+' dager — nærmere eksamen kan repetisjon av det du allerede har notert bli viktigere enn nytt lesestoff.';
+  } else {
+    examNote.style.display = 'none';
+  }
+  document.getElementById('compass-overlay').classList.add('open');
+});
+document.getElementById('compass-close').addEventListener('click', function(){
+  document.getElementById('compass-overlay').classList.remove('open');
+});
+document.getElementById('compass-close-btn').addEventListener('click', function(){
+  document.getElementById('compass-overlay').classList.remove('open');
+});
+function renderMode(){
+  const d = data[currentMode];
+  const todayPlan = weekPlan[new Date().getDay()];
+  if(todayPlan === 'fri'){
+    document.getElementById('focus-subject').textContent = 'FRIDAG';
+    document.getElementById('focus-text').textContent = 'Ingen fokus i dag — nyt friheten.';
+  } else if(todayPlan){
+    document.getElementById('focus-subject').textContent = todayPlan.toUpperCase();
+    document.getElementById('focus-text').textContent = 'Trykk på kompasset under for å vite akkurat hva du skal gjøre.';
+  } else {
+    document.getElementById('focus-subject').textContent = '';
+    document.getElementById('focus-text').textContent = '';
+  }
+  renderNearestAndExams(d);
+  document.getElementById('course-list').innerHTML =
+    '<div class="carousel" id="carousel">' + d.courses.map(function(c){
+      return '<div class="hero-card" data-course="'+c.name+'"><div class="ring-lg" style="--pct:'+c.pct+';--ring-color:'+(c.color||'var(--brass)')+';"><span>'+c.pct+'%</span></div>'+
+        '<p class="hname">'+c.name+'</p><p class="hsub">'+c.sub+'</p>'+
+        '<span class="hnext">'+c.next+'</span></div>';
+    }).join('') + '</div>' +
+    '<div class="dots">' + d.courses.map(function(_,i){return '<span class="dot'+(i===0?' active':'')+'"></span>';}).join('') + '</div>';
+  const carousel = document.getElementById('carousel');
+  const dots = document.querySelectorAll('#course-list .dot');
+  carousel.addEventListener('scroll', function(){
+    const w = carousel.firstElementChild.getBoundingClientRect().width + 12;
+    const idx = Math.round(carousel.scrollLeft / w);
+    dots.forEach(function(dot,i){dot.classList.toggle('active', i===idx);});
+  });
+  document.querySelectorAll('.hero-card').forEach(function(card){
+    card.addEventListener('click', function(){ openCourseDetail(card.dataset.course); });
+  });
+}
+function renderNearestAndExams(d){
+  const flat = [];
+  d.plan.forEach(function(g){
+    g.items.forEach(function(i){
+      if(typeof i.days === 'number'){ flat.push({course:g.group, name:i.name, days:i.days, type:i.type}); }
+    });
+  });
+  flat.sort(function(a,b){ return a.days-b.days; });
+  const ownDeadlines = flat.filter(function(i){ return i.type!=='Eksamen'; });
+  document.getElementById('nearest-box').innerHTML = ownDeadlines.slice(0,4).map(function(i){
+    const courseTag = i.course === 'Andre frister' ? '' : ' <span class="csub">— '+i.course+'</span>';
+    return '<div class="deadline-row"><span class="name">'+i.name+courseTag+'</span><span class="chip '+(i.days<=5?'soon':'later')+'">'+i.days+' dager</span></div>';
+  }).join('') || '<p class="csub" style="margin-bottom:10px;">Ingen egne frister registrert ennå.</p><button class="fun-btn" id="quick-deadline-open">+ Legg til frist</button>';
+  const exams = flat.filter(function(i){ return i.type==='Eksamen'; });
+  const wrap = document.getElementById('exam-countdown-wrap');
+  if(!examCountdownOn || exams.length===0){ wrap.style.display='none'; return; }
+  wrap.style.display='block';
+  document.getElementById('exam-box').innerHTML = exams.map(function(e){
+    return '<div class="deadline-row"><span class="name">'+e.name+' <span class="csub">— '+e.course+'</span></span><span class="chip soon">'+e.days+' dager</span></div>';
+  }).join('');
+}
+function daysFromToday(dateObj){
+  const today = new Date(); today.setHours(0,0,0,0);
+  const target = new Date(dateObj); target.setHours(0,0,0,0);
+  return Math.round((target-today)/86400000);
+}
+function dateInputToLabelAndDays(dateStr){
+  if(!dateStr) return {label:'ikke satt', days:null};
+  const parts = dateStr.split('-');
+  const dateObj = new Date(parseInt(parts[0],10), parseInt(parts[1],10)-1, parseInt(parts[2],10));
+  return {label:dateObj.toLocaleDateString('nb-NO'), days:daysFromToday(dateObj)};
+}
+function formatMinutes(mins){
+  mins = Math.round(mins);
+  if(mins < 60) return mins+' min';
+  const h = Math.floor(mins/60), m = mins%60;
+  return h+'t'+(m>0?' '+m+'min':'');
+}
+function openCourseDetail(courseName){
+  const d = data[currentMode];
+  const group = d.plan.find(function(g){ return g.group===courseName; });
+  const courseInfo = d.courses.find(function(c){ return c.name===courseName; });
+  document.getElementById('course-detail-title').textContent = courseName;
+  document.getElementById('course-detail-progress').textContent = courseInfo ? courseInfo.sub : '';
+  document.getElementById('course-color-picker').innerHTML = subjectPalette.map(function(col){
+    const sel = courseInfo && courseInfo.color === col;
+    return '<button class="color-swatch-btn" type="button" data-color="'+col+'" style="width:28px;height:28px;border-radius:50%;background:'+col+';border:'+(sel?'3px solid var(--ink)':'2px solid transparent')+';cursor:pointer;"></button>';
+  }).join('');
+  document.querySelectorAll('.color-swatch-btn').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      if(courseInfo){ courseInfo.color = btn.dataset.color; }
+      openCourseDetail(courseName);
+      renderMode();
+    });
+  });
+  const items = group ? group.items : [];
+  const pensumItems = items.map(function(i,idx){ return {i:i, idx:idx}; }).filter(function(x){ return x.i.type==='Pensum' && x.i.totalPages>0; });
+  const otherItems = items.map(function(i,idx){ return {i:i, idx:idx}; }).filter(function(x){ return !(x.i.type==='Pensum' && x.i.totalPages>0); });
+  let html = '';
+  html += '<p class="field-label" style="margin-top:0;">PENSUM I DETTE FAGET</p>';
+  html += pensumItems.length ? pensumItems.map(function(x){
+    const i = x.i, idx = x.idx;
+    const pct = Math.min(Math.round((i.pagesRead/i.totalPages)*100),100);
+    const pace = i.pagesRead>0 ? (i.totalMinutes/i.pagesRead) : 0;
+    const remainingEst = pace>0 ? Math.round(pace*(i.totalPages-i.pagesRead)) : 0;
+    const paceLine = pace>0
+      ? '<p class="twhy">Ditt tempo: ~'+(pace).toFixed(1)+' min/side · anslått gjenstående: '+formatMinutes(remainingEst)+'</p>'
+      : '<p class="twhy">Logg tid sammen med lesing for å få et anslag på gjenstående tid.</p>';
+    return '<div class="tip-card" style="text-align:left;">'+
+      '<p class="tname">'+i.name+(i.author?' — '+i.author:'')+'</p>'+
+      '<p class="twhy">'+i.pagesRead+' av '+i.totalPages+' sider lest · frist: '+i.label+'</p>'+
+      paceLine+
+      '<div class="progress-strip" style="margin:8px 0 10px;"><div style="width:'+pct+'%;background:var(--moss);height:100%;border-radius:3px;"></div></div>'+
+      '<p class="field-label" style="margin-top:0;">HVA LESTE DU NÅ?</p>'+
+      '<div style="margin-bottom:8px;">'+
+        '<button class="quick-chip log-unit-btn active" type="button" data-unit="sider">Sider</button>'+
+        '<button class="quick-chip log-unit-btn" type="button" data-unit="kapitler">Kapitler</button>'+
+      '</div>'+
+      '<input type="number" class="field-input amount-input" style="margin-bottom:6px;" placeholder="Antall lest nå">'+
+      '<div style="display:flex;gap:8px;margin-bottom:6px;">'+
+        '<input type="number" class="field-input hours-input" style="margin-bottom:0;flex:1;" placeholder="Timer brukt">'+
+        '<input type="number" class="field-input mins-input" style="margin-bottom:0;flex:1;" placeholder="Minutter">'+
+      '</div>'+
+      '<button class="quick-chip log-pages-btn" type="button" style="background:var(--brass);color:#fff;width:100%;" data-group="'+courseName+'" data-idx="'+idx+'">Logg</button>'+
+      '</div>';
+  }).join('') : '<p class="csub" style="margin-bottom:14px;">Ingen bøker lagt til for dette faget ennå.</p>';
+  html += '<p class="field-label">FRISTER I DETTE FAGET</p>';
+  html += otherItems.length ? otherItems.map(function(x){
+    const i = x.i;
+    return '<div class="deadline-row"><span class="name">'+i.name+'</span><span class="chip '+i.chip+'">'+i.label+'</span></div>';
+  }).join('') : '<p class="csub">Ingen frister registrert ennå for dette faget.</p>';
+  document.getElementById('course-detail-list').innerHTML = html;
+  document.getElementById('course-detail-overlay').classList.add('open');
+}
+document.getElementById('course-detail-list').addEventListener('click', function(e){
+  const unitBtn = e.target.closest('.log-unit-btn');
+  if(unitBtn){
+    unitBtn.parentNode.querySelectorAll('.log-unit-btn').forEach(function(b){b.classList.remove('active');});
+    unitBtn.classList.add('active');
+    return;
+  }
+  const btn = e.target.closest('.log-pages-btn');
+  if(!btn) return;
+  const group = data[currentMode].plan.find(function(g){ return g.group === btn.dataset.group; });
+  if(!group) return;
+  const item = group.items[parseInt(btn.dataset.idx,10)];
+  if(!item) return;
+  const container = btn.parentNode;
+  const activeUnitBtn = container.querySelector('.log-unit-btn.active');
+  const unit = activeUnitBtn ? activeUnitBtn.dataset.unit : 'sider';
+  const amountInput = container.querySelector('.amount-input');
+  const hoursInput = container.querySelector('.hours-input');
+  const minsInput = container.querySelector('.mins-input');
+  const rawAmount = parseInt(amountInput.value,10) || 0;
+  const pagesEquivalent = unit === 'kapitler' ? rawAmount*20 : rawAmount;
+  const minutesLogged = (parseInt(hoursInput.value,10) || 0)*60 + (parseInt(minsInput.value,10) || 0);
+  const chapterSize = 20;
+  const oldChapters = Math.floor(item.pagesRead / chapterSize);
+  const newPages = Math.min(item.pagesRead + pagesEquivalent, item.totalPages);
+  const newChapters = Math.floor(newPages / chapterSize);
+  item.pagesRead = newPages;
+  item.totalMinutes = (item.totalMinutes||0) + minutesLogged;
+  if(minutesLogged>0) logActivity(item.name, minutesLogged);
+  const justFinished = newPages >= item.totalPages && item.chip !== 'done';
+  if(newPages >= item.totalPages){ item.chip = 'done'; }
+  openCourseDetail(btn.dataset.group);
+  if(justFinished){
+    triggerConfetti();
+    showLogToast('Ferdig med boka! Notert til neste gang: ~'+(item.totalMinutes/item.totalPages).toFixed(1)+' min/side i snitt.');
+  } else if(newChapters > oldChapters){
+    showChapterPopup();
+    if(rawAmount>0) showLogToast('Notert: '+rawAmount+' '+unit+' på '+minutesLogged+' min.');
+  } else if(rawAmount>0){
+    showLogToast('Notert: '+rawAmount+' '+unit+' på '+minutesLogged+' min.');
+  }
+});
+function renderProgressLog(){
+  const d = data[currentMode];
+  const rows = [];
+  if(d.courses.length){
+    const subjectChips = d.courses.map(function(c,i){
+      return '<button class="quick-chip general-subject-btn'+(i===0?' active':'')+'" type="button" data-subject="'+c.name+'"><span class="subject-dot" style="background:'+(c.color||'var(--brass)')+';"></span>'+c.name+'</button>';
+    }).join('');
+    const activityTypes = ['Lesing','Video/forelesning','Øvingsoppgaver','Notater','Annet'];
+    const activityChips = activityTypes.map(function(a,i){
+      return '<button class="quick-chip activity-type-btn'+(i===0?' active':'')+'" type="button" data-activity="'+a+'">'+a+'</button>';
+    }).join('');
+    const lastActivityLine = d.courses[0].lastActivity
+      ? '<p class="csub" id="general-subject-summary">Sist logget: '+d.courses[0].lastActivity+' · totalt '+formatMinutes(d.courses[0].generalMinutes||0)+'</p>'
+      : '<p class="csub" id="general-subject-summary"></p>';
+    rows.push('<div class="tip-card" style="text-align:left;">'+
+      '<p class="tname">Jobbet med et fag generelt?</p>'+
+      '<p class="twhy">For studietid som ikke hører til én bestemt oppgave — f.eks. repetisjon, video eller øving.</p>'+
+      '<p class="field-label" style="margin-top:8px;">HVILKET FAG?</p>'+
+      '<div style="margin-bottom:8px;">'+subjectChips+'</div>'+
+      '<p class="field-label" style="margin-top:0;">HVA GJORDE DU?</p>'+
+      '<div style="margin-bottom:8px;">'+activityChips+'</div>'+
+      '<input type="text" id="general-activity-other" class="field-input" style="display:none;margin-bottom:8px;" placeholder="Beskriv hva du gjorde">'+
+      lastActivityLine+
+      '<div style="display:flex;gap:6px;">'+
+        '<input type="number" class="field-input hours-input" id="general-hours" style="margin-bottom:0;flex:1;" placeholder="Timer">'+
+        '<input type="number" class="field-input mins-input" id="general-mins" style="margin-bottom:0;flex:1;" placeholder="Min">'+
+        '<button class="quick-chip" type="button" id="log-general-subject-btn" style="background:var(--brass);color:#fff;flex-shrink:0;">Logg</button>'+
+      '</div></div>');
+  }
+  d.plan.forEach(function(g){
+    g.items.forEach(function(item, idx){
+      if(item.chip === 'done') return;
+      if(item.type === 'Pensum' && item.totalPages > 0){
+        const pct = Math.min(Math.round((item.pagesRead/item.totalPages)*100),100);
+        const pace = item.pagesRead>0 ? (item.totalMinutes/item.pagesRead) : 0;
+        const remainingEst = pace>0 ? Math.round(pace*(item.totalPages-item.pagesRead)) : 0;
+        const paceLine = pace>0
+          ? '<p class="twhy">Ditt tempo: ~'+(pace).toFixed(1)+' min/side · anslått gjenstående: '+formatMinutes(remainingEst)+'</p>'
+          : '<p class="twhy">Logg tid sammen med lesing for et anslag på gjenstående tid.</p>';
+        rows.push('<div class="tip-card" style="text-align:left;">'+
+          '<p class="tname">'+item.name+' <span class="csub">— '+g.group+'</span></p>'+
+          '<p class="twhy">'+item.pagesRead+' av '+item.totalPages+' sider lest</p>'+
+          paceLine+
+          '<div class="progress-strip" style="margin:6px 0 10px;"><div style="width:'+pct+'%;background:var(--moss);height:100%;border-radius:3px;"></div></div>'+
+          '<p class="field-label" style="margin-top:0;">HVA LESTE DU NÅ?</p>'+
+          '<div style="margin-bottom:8px;">'+
+            '<button class="quick-chip log-unit-btn active" type="button" data-unit="sider">Sider</button>'+
+            '<button class="quick-chip log-unit-btn" type="button" data-unit="kapitler">Kapitler</button>'+
+          '</div>'+
+          '<input type="number" class="field-input amount-input" style="margin-bottom:6px;" placeholder="Antall lest nå">'+
+          '<div style="display:flex;gap:8px;margin-bottom:6px;">'+
+            '<input type="number" class="field-input hours-input" style="margin-bottom:0;flex:1;" placeholder="Timer brukt">'+
+            '<input type="number" class="field-input mins-input" style="margin-bottom:0;flex:1;" placeholder="Minutter">'+
+          '</div>'+
+          '<button class="quick-chip log-pages-btn" type="button" style="background:var(--brass);color:#fff;width:100%;" data-group="'+g.group+'" data-idx="'+idx+'">Logg</button>'+
+        '</div>');
+      } else {
+        const progressLine = item.amountDone ? '<p class="twhy">Sist logget: '+item.amountDone+' sider/kapitler totalt (regnet om)</p>' : '';
+        const groupLine = g.group === 'Andre frister' ? '' : '<p class="twhy">'+g.group+'</p>';
+        rows.push('<div class="tip-card" style="text-align:left;">'+
+          '<p class="tname">'+item.name+'</p>'+groupLine+
+          progressLine+
+          '<p class="field-label" style="margin-top:8px;">HVOR MYE BLE GJORT?</p>'+
+          '<div style="margin-bottom:8px;">'+
+            '<button class="quick-chip log-unit-btn active" type="button" data-unit="sider">Sider</button>'+
+            '<button class="quick-chip log-unit-btn" type="button" data-unit="kapitler">Kapitler</button>'+
+          '</div>'+
+          '<input type="number" class="field-input amount-input" style="margin-bottom:6px;" placeholder="Antall">'+
+          '<div style="display:flex;gap:6px;margin-bottom:8px;">'+
+            '<input type="number" class="field-input hours-input" style="margin-bottom:0;flex:1;" placeholder="Timer">'+
+            '<input type="number" class="field-input mins-input" style="margin-bottom:0;flex:1;" placeholder="Min">'+
+          '</div>'+
+          '<label style="display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--ink-soft);margin-bottom:8px;"><input type="checkbox" class="done-checkbox"> Helt ferdig med dette</label>'+
+          '<button class="quick-chip log-generic-btn" type="button" style="background:var(--brass);color:#fff;width:100%;" data-group="'+g.group+'" data-idx="'+idx+'">Logg</button>'+
+          '</div>');
+      }
+    });
+  });
+  document.getElementById('progress-log-list').innerHTML = rows.join('') || '<p class="csub" style="margin-bottom:10px;">Ingenting å registrere ennå.</p><button class="fun-btn" id="progress-log-empty-cta">+ Legg til fokusområde</button>';
+}
+document.getElementById('progress-log-open').addEventListener('click', function(){
+  renderProgressLog();
+  document.getElementById('progress-log-overlay').classList.add('open');
+});
+document.getElementById('progress-log-close').addEventListener('click', function(){
+  document.getElementById('progress-log-overlay').classList.remove('open');
+});
+document.getElementById('progress-log-list').addEventListener('click', function(e){
+  const emptyCta = e.target.closest('#progress-log-empty-cta');
+  if(emptyCta){
+    document.getElementById('progress-log-overlay').classList.remove('open');
+    renderWeekPlanner();
+    document.getElementById('weekplan-overlay').classList.add('open');
+    document.getElementById('quick-subject-row').style.display = 'block';
+    document.getElementById('quick-subject-input').focus();
+    return;
+  }
+  const subjectBtn = e.target.closest('.general-subject-btn');
+  if(subjectBtn){
+    subjectBtn.parentNode.querySelectorAll('.general-subject-btn').forEach(function(b){b.classList.remove('active');});
+    subjectBtn.classList.add('active');
+    const course = data[currentMode].courses.find(function(c){ return c.name === subjectBtn.dataset.subject; });
+    const summaryEl = document.getElementById('general-subject-summary');
+    if(summaryEl){ summaryEl.textContent = course && course.lastActivity ? 'Sist logget: '+course.lastActivity+' · totalt '+formatMinutes(course.generalMinutes||0) : ''; }
+    return;
+  }
+  const activityBtn = e.target.closest('.activity-type-btn');
+  if(activityBtn){
+    activityBtn.parentNode.querySelectorAll('.activity-type-btn').forEach(function(b){b.classList.remove('active');});
+    activityBtn.classList.add('active');
+    const otherInput = document.getElementById('general-activity-other');
+    otherInput.style.display = activityBtn.dataset.activity === 'Annet' ? 'block' : 'none';
+    return;
+  }
+  const logGeneralBtn = e.target.closest('#log-general-subject-btn');
+  if(logGeneralBtn){
+    const activeSubjectBtn = document.querySelector('.general-subject-btn.active');
+    if(!activeSubjectBtn) return;
+    const course = data[currentMode].courses.find(function(c){ return c.name === activeSubjectBtn.dataset.subject; });
+    if(!course) return;
+    const activeActivityBtn = document.querySelector('.activity-type-btn.active');
+    const activityType = activeActivityBtn ? activeActivityBtn.dataset.activity : 'Annet';
+    const otherText = document.getElementById('general-activity-other').value.trim();
+    const activityLabel = activityType === 'Annet' && otherText ? otherText : activityType;
+    const hours = parseInt(document.getElementById('general-hours').value,10) || 0;
+    const mins = parseInt(document.getElementById('general-mins').value,10) || 0;
+    const totalMins = hours*60+mins;
+    course.generalMinutes = (course.generalMinutes||0) + totalMins;
+    course.lastActivity = activityLabel;
+    if(totalMins>0) logActivity(course.name+' — '+activityLabel, totalMins);
+    renderProgressLog();
+    return;
+  }
+  const unitBtn = e.target.closest('.log-unit-btn');
+  if(unitBtn){
+    unitBtn.parentNode.querySelectorAll('.log-unit-btn').forEach(function(b){b.classList.remove('active');});
+    unitBtn.classList.add('active');
+    return;
+  }
+  const pagesBtn = e.target.closest('.log-pages-btn');
+  const genericBtn = e.target.closest('.log-generic-btn');
+  if(pagesBtn){
+    const group = data[currentMode].plan.find(function(g){ return g.group === pagesBtn.dataset.group; });
+    if(!group) return;
+    const item = group.items[parseInt(pagesBtn.dataset.idx,10)];
+    if(!item) return;
+    const container = pagesBtn.parentNode;
+    const activeUnitBtn = container.querySelector('.log-unit-btn.active');
+    const unit = activeUnitBtn ? activeUnitBtn.dataset.unit : 'sider';
+    const amountInput = container.querySelector('.amount-input');
+    const hoursInput = container.querySelector('.hours-input');
+    const minsInput = container.querySelector('.mins-input');
+    const rawAmount = parseInt(amountInput.value,10) || 0;
+    const pagesEquivalent = unit === 'kapitler' ? rawAmount*20 : rawAmount;
+    const minutesLogged = (parseInt(hoursInput.value,10) || 0)*60 + (parseInt(minsInput.value,10) || 0);
+    const chapterSize = 20;
+    const oldChapters = Math.floor(item.pagesRead / chapterSize);
+    const newPages = Math.min(item.pagesRead + pagesEquivalent, item.totalPages);
+    const newChapters = Math.floor(newPages / chapterSize);
+    item.pagesRead = newPages;
+    item.totalMinutes = (item.totalMinutes||0) + minutesLogged;
+    if(minutesLogged>0) logActivity(item.name, minutesLogged);
+    const justFinished = newPages >= item.totalPages && item.chip !== 'done';
+    if(newPages >= item.totalPages){ item.chip = 'done'; }
+    renderMode();
+    renderProgressLog();
+    if(justFinished){
+      triggerConfetti();
+      showLogToast('Ferdig med boka! Notert til neste gang: ~'+(item.totalMinutes/item.totalPages).toFixed(1)+' min/side i snitt.');
+    } else if(newChapters > oldChapters){
+      showChapterPopup();
+      if(rawAmount>0) showLogToast('Notert: '+rawAmount+' '+unit+' på '+minutesLogged+' min.');
+    } else if(rawAmount>0){
+      showLogToast('Notert: '+rawAmount+' '+unit+' på '+minutesLogged+' min.');
+    }
+  }
+  if(genericBtn){
+    const group = data[currentMode].plan.find(function(g){ return g.group === genericBtn.dataset.group; });
+    if(!group) return;
+    const item = group.items[parseInt(genericBtn.dataset.idx,10)];
+    if(!item) return;
+    const container = genericBtn.parentNode;
+    const activeUnitBtn = container.querySelector('.log-unit-btn.active');
+    const unit = activeUnitBtn ? activeUnitBtn.dataset.unit : 'sider';
+    const amountInput = container.querySelector('.amount-input');
+    const hoursInput = container.querySelector('.hours-input');
+    const minsInput = container.querySelector('.mins-input');
+    const doneCheckbox = container.querySelector('.done-checkbox');
+    const rawAmount = parseInt(amountInput.value,10) || 0;
+    const pagesEquivalent = unit === 'kapitler' ? rawAmount*20 : rawAmount;
+    const timeSpent = (parseInt(hoursInput.value,10) || 0)*60 + (parseInt(minsInput.value,10) || 0);
+    item.amountDone = (item.amountDone||0) + pagesEquivalent;
+    item.timeSpent = (item.timeSpent||0) + timeSpent;
+    if(timeSpent>0) logActivity(item.name, timeSpent);
+    const justFinished = doneCheckbox && doneCheckbox.checked && item.chip !== 'done';
+    if(doneCheckbox && doneCheckbox.checked){ item.chip = 'done'; }
+    renderMode();
+    renderProgressLog();
+    if(justFinished){
+      triggerConfetti();
+      showLogToast('Ferdig! Notert: '+timeSpent+' min brukt totalt på denne.');
+    } else if(rawAmount>0 || timeSpent>0){
+      showLogToast('Notert: '+rawAmount+' '+unit+' på '+timeSpent+' min.');
+    }
+  }
+});
+function triggerConfetti(){
+  const colors = ['#B4752A','#3E7C74','#8B5A7A','#5C7A3E','#4A6280'];
+  for(let i=0;i<28;i++){
+    const piece = document.createElement('div');
+    piece.className = 'confetti-piece';
+    piece.style.left = (Math.random()*100)+'vw';
+    piece.style.background = colors[Math.floor(Math.random()*colors.length)];
+    piece.style.animationDuration = (1.2 + Math.random()*0.9)+'s';
+    piece.style.animationDelay = (Math.random()*0.3)+'s';
+    document.body.appendChild(piece);
+    setTimeout(function(){ piece.remove(); }, 2400);
+  }
+}
+function showLogToast(text){
+  const toast = document.getElementById('log-toast');
+  toast.textContent = text;
+  toast.classList.add('show');
+  clearTimeout(window._toastTimer);
+  window._toastTimer = setTimeout(function(){ toast.classList.remove('show'); }, 2600);
+}
+function showChapterPopup(){
+  document.getElementById('chapter-popup').classList.add('open');
+}
+document.getElementById('chapter-popup-close').addEventListener('click', function(){
+  document.getElementById('chapter-popup').classList.remove('open');
+});
+
+function treeSvg(size, kind){
+  kind = kind || 'default';
+  const dim = size==='small' ? 20 : size==='medium' ? 28 : 38;
+  if(kind==='furu'){
+    return '<svg viewBox="0 0 24 24" width="'+dim+'" height="'+dim+'"><path d="M12 2 L18 11 L15.3 11 L19.5 17 L4.5 17 L8.7 11 L6 11 Z" fill="#3E5C3E"/><rect x="10.7" y="17" width="2.6" height="4.5" rx="1" fill="var(--brass-deep)"/></svg>';
+  }
+  if(kind==='bjork'){
+    return '<svg viewBox="0 0 24 24" width="'+dim+'" height="'+dim+'"><circle cx="9" cy="8" r="5" fill="#8FAE7C"/><circle cx="15" cy="8" r="5" fill="#8FAE7C"/><rect x="10.8" y="12.5" width="2.4" height="8.5" rx="1" fill="#E8E2D3"/><rect x="10.8" y="14.5" width="2.4" height="1.1" fill="#3A362E"/><rect x="10.8" y="17.5" width="2.4" height="1.1" fill="#3A362E"/></svg>';
+  }
+  const fill = kind==='cherry' ? '#C97A9A' : kind==='gold' ? '#D4A73A' : 'var(--moss)';
+  if(size==='small'){
+    return '<svg viewBox="0 0 24 24" width="20" height="20"><circle cx="12" cy="9" r="5" fill="'+fill+'"/><rect x="10.7" y="14" width="2.6" height="5" rx="1" fill="var(--brass-deep)"/></svg>';
+  }
+  if(size==='medium'){
+    return '<svg viewBox="0 0 24 24" width="28" height="28"><circle cx="9" cy="10" r="6" fill="'+fill+'"/><circle cx="15" cy="10" r="6" fill="'+fill+'"/><rect x="10.7" y="16" width="2.6" height="6" rx="1" fill="var(--brass-deep)"/></svg>';
+  }
+  return '<svg viewBox="0 0 24 24" width="38" height="38"><circle cx="8" cy="11" r="6.5" fill="'+fill+'"/><circle cx="16" cy="11" r="6.5" fill="'+fill+'"/><circle cx="12" cy="7" r="7" fill="'+fill+'"/><rect x="10.5" y="17" width="3" height="7" rx="1.2" fill="var(--brass-deep)"/></svg>';
+}
+let forest = [];
+let currentWorkMinutes = 25;
+const shopItems = [
+  {id:'cherry', name:'Kirsebærtre', price:'19 kr', kind:'cherry'},
+  {id:'gold', name:'Gulltre', price:'29 kr', kind:'gold'}
+];
+let ownedShopItems = [];
+function sizeForWork(){
+  return currentWorkMinutes===25 ? 'small' : currentWorkMinutes===45 ? 'medium' : 'large';
+}
+const forestStages = [
+  {min:0, name:'frøplante'},
+  {min:3, name:'spire'},
+  {min:6, name:'ung lund'},
+  {min:9, name:'tett skog'},
+  {min:12, name:'gammel skog'},
+  {min:15, name:'villmark'}
+];
+function stageInfo(count){
+  let idx = 0;
+  for(let i=0;i<forestStages.length;i++){ if(count>=forestStages[i].min){ idx=i; } }
+  const current = forestStages[idx];
+  const next = forestStages[idx+1];
+  const span = next ? next.min-current.min : 1;
+  const doneInStage = next ? count-current.min : span;
+  const progress = next ? Math.min(doneInStage/span,1) : 1;
+  return {name:current.name, nextName: next?next.name:null, toNext: next?next.min-count:0, progress:progress, doneInStage:doneInStage, span:span};
+}
+function treeSvgGhost(){
+  return '<svg viewBox="0 0 24 24"><circle cx="12" cy="9" r="7" fill="none" stroke="var(--line-strong)" stroke-width="1.5"/><rect x="10.5" y="15" width="3" height="6" rx="1" fill="none" stroke="var(--line-strong)" stroke-width="1.5"/></svg>';
+}
+let weeklyMinutes = 0;
+const weeklyGoalMinutes = 25*60;
+function renderGoalTree(){
+  const pct = Math.min(weeklyMinutes/weeklyGoalMinutes,1);
+  const fillFromTop = Math.round((1-pct)*100);
+  document.getElementById('goal-tree-wrap').innerHTML =
+    '<svg viewBox="0 0 100 100" width="90" height="90"><circle cx="35" cy="45" r="20" fill="none" stroke="var(--line-strong)" stroke-width="2"/><circle cx="65" cy="45" r="20" fill="none" stroke="var(--line-strong)" stroke-width="2"/><circle cx="50" cy="30" r="22" fill="none" stroke="var(--line-strong)" stroke-width="2"/><rect x="46" y="60" width="8" height="32" rx="3" fill="none" stroke="var(--line-strong)" stroke-width="2"/></svg>'+
+    '<svg viewBox="0 0 100 100" width="90" height="90" style="clip-path:inset('+fillFromTop+'% 0 0 0);"><circle cx="35" cy="45" r="20" fill="var(--moss)"/><circle cx="65" cy="45" r="20" fill="var(--moss)"/><circle cx="50" cy="30" r="22" fill="var(--moss)"/><rect x="46" y="60" width="8" height="32" rx="3" fill="var(--brass-deep)"/></svg>';
+  document.getElementById('goal-text').textContent = Math.round(weeklyMinutes/60)+' av 25 timer denne uken';
+}
+function renderFocus(){
+  const discount = Math.min(forest.length*2,10);
+  const price = (9.99*(1-discount/100)).toFixed(2);
+  const info = stageInfo(forest.length);
+  renderGoalTree();
+  document.getElementById('forest-row').innerHTML = forest.slice(-8).map(function(t){ return treeSvg(t.size, t.kind); }).join('');
+  document.getElementById('fp-sub-text').textContent = forest.length+' trær — '+info.name;
+  document.getElementById('stage-bar').style.width = (info.progress*100)+'%';
+  document.getElementById('stage-next').textContent = info.nextName
+    ? info.toNext+' til '+info.nextName
+    : 'Høyeste steg nådd — skogen fortsetter å vokse likevel';
+  document.getElementById('kp-price').textContent = '$'+price;
+  document.getElementById('kp-old').style.display = discount>0 ? 'inline':'none';
+}
+renderFocus();
+const dayLabels = ['I dag','I går','2 d','3 d','4 d','5 d','6 d'];
+function renderWeekForest(){
+  const cols = [6,5,4,3,2,1,0].map(function(d){
+    return {day:d, trees:forest.filter(function(t){ return t.day===d; })};
+  });
+  document.getElementById('week-forest').innerHTML = cols.map(function(c){
+    const treesHtml = c.trees.length
+      ? c.trees.map(function(t){ return treeSvg(t.size, t.kind); }).join('')
+      : '<span class="week-empty">·</span>';
+    return '<div class="week-col"><div class="week-trees">'+treesHtml+'</div><p class="week-label">'+dayLabels[c.day]+'</p></div>';
+  }).join('');
+}
+const speciesList = [
+  {kind:'default', name:'Lauvtre', free:true},
+  {kind:'furu', name:'Furu', free:true},
+  {kind:'bjork', name:'Bjørk', free:true},
+  {kind:'cherry', name:'Kirsebær', free:false},
+  {kind:'gold', name:'Gulltre', free:false}
+];
+let selectedKind = 'default';
+function renderSpeciesPicker(){
+  document.getElementById('species-picker').innerHTML = speciesList.map(function(s){
+    const locked = !s.free && ownedShopItems.indexOf(s.kind)===-1;
+    const sel = selectedKind===s.kind;
+    return '<div class="avatar-card'+(sel?' selected':'')+'" style="width:70px;padding:8px 4px;opacity:'+(locked?'0.45':'1')+';" data-species="'+s.kind+'" data-locked="'+locked+'">'+
+      (sel?'<span class="check">✓</span>':'')+treeSvg('medium', s.kind)+
+      '<p class="aname" style="font-size:11px;margin-top:4px;">'+s.name+'</p>'+
+      (locked?'<p class="atag" style="font-size:9px;">Kjøp under</p>':'')+
+      '</div>';
+  }).join('');
+  document.querySelectorAll('#species-picker [data-species]').forEach(function(el){
+    el.addEventListener('click', function(){
+      if(el.dataset.locked==='true') return;
+      selectedKind = el.dataset.species;
+      renderSpeciesPicker();
+    });
+  });
+}
+function renderForestOverlay(){
+  renderWeekForest();
+  renderSpeciesPicker();
+  document.getElementById('forest-grid').innerHTML = forest.map(function(t){ return treeSvg(t.size, t.kind); }).join('');
+  document.getElementById('shop-list').innerHTML = shopItems.map(function(s){
+    const owned = ownedShopItems.indexOf(s.kind) > -1;
+    return '<div class="shop-item">'+treeSvg('medium', s.kind)+
+      '<div><p class="sname">'+s.name+'</p><p class="sprice">'+(owned?'Kjøpt':s.price)+'</p></div>'+
+      '<button class="shop-buy'+(owned?' owned':'')+'" data-kind="'+s.kind+'">'+(owned?'Eid ✓':'Kjøp')+'</button></div>';
+  }).join('');
+  document.querySelectorAll('.shop-buy').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      if(btn.classList.contains('owned')) return;
+      ownedShopItems.push(btn.dataset.kind);
+      renderForestOverlay();
+    });
+  });
+}
+document.getElementById('see-forest-link').addEventListener('click', function(){
+  renderForestOverlay();
+  document.getElementById('forest-overlay').classList.add('open');
+});
+document.getElementById('forest-close').addEventListener('click', function(){
+  document.getElementById('forest-overlay').classList.remove('open');
+});
+document.getElementById('course-detail-close').addEventListener('click', function(){
+  document.getElementById('course-detail-overlay').classList.remove('open');
+});
+renderMode();
+renderActivityLog();
+
+document.querySelectorAll('.tab').forEach(function(btn){
+  btn.addEventListener('click', function(){
+    document.querySelectorAll('.tab').forEach(function(b){b.classList.remove('active');});
+    document.querySelectorAll('.screen').forEach(function(s){s.classList.remove('active');});
+    btn.classList.add('active');
+    document.getElementById('screen-'+btn.dataset.screen).classList.add('active');
+  });
+});
+const avatarSvgs = {
+  rune:'<circle cx="20" cy="20" r="20" fill="#B4752A"/><circle cx="14" cy="17" r="2" fill="#1C1B18"/><circle cx="26" cy="17" r="2" fill="#1C1B18"/><path d="M13 25 Q20 29 27 25" stroke="#1C1B18" stroke-width="2" fill="none" stroke-linecap="round"/>',
+  live:'<circle cx="20" cy="20" r="20" fill="#5B6B4A"/><circle cx="14" cy="17" r="2" fill="#FBF8F2"/><circle cx="26" cy="17" r="2" fill="#FBF8F2"/><path d="M12 24 Q20 32 28 24" stroke="#FBF8F2" stroke-width="2" fill="none" stroke-linecap="round"/>',
+  vilde:'<circle cx="20" cy="20" r="20" fill="#7C8FA6"/><circle cx="14" cy="17" r="2" fill="#1C1B18"/><circle cx="26" cy="17" r="2" fill="#1C1B18"/><path d="M14 25 Q20 28 26 25" stroke="#1C1B18" stroke-width="2" fill="none" stroke-linecap="round"/>',
+  daniel:'<circle cx="20" cy="20" r="20" fill="#A6667C"/><circle cx="14" cy="17" r="2" fill="#FBF8F2"/><circle cx="26" cy="17" r="2" fill="#FBF8F2"/><path d="M13 24 Q20 31 27 24" stroke="#FBF8F2" stroke-width="2" fill="none" stroke-linecap="round"/>'
+};
+const avatarNames = {rune:'Rune', live:'Live', vilde:'Vilde', daniel:'Daniel'};
+const avatarReplies = {
+  rune:'La oss dele det opp i ett lite steg. Hva er den aller første, minste tingen du kan gjøre nå?',
+  live:'Kom igjen, du klarer dette! Sett en timer på 10 minutter og bare start — resten løser seg.',
+  vilde:'Det høres ut som mye akkurat nå, og det er helt greit. Skal vi finne én liten ting å starte rolig med?',
+  daniel:'Du kan ikke kontrollere at det føles vanskelig. Du kan kontrollere neste handling. Hva er den?'
+};
+let currentAvatar = 'rune';
+const avatarGreetings = {
+  rune:'Herlig jobbet så langt. La oss fortsette det gode arbeidet i dag, i ditt eget tempo.',
+  live:'Du er i gang, og det er det som teller! Fortsett sånn — dette får du til.',
+  vilde:'Så fint å se deg her i dag. Du gjør en fin innsats, akkurat som du er.',
+  daniel:'En ny dag. Fokuser på det som er i din kontroll, og gjør jobben som ligger foran deg.'
+};
+const dailyQuotes = [
+  'Fremgang er sjelden rett frem, men den teller likevel.',
+  'Det du gjorde i dag var nok, selv om det ikke føltes sånn.',
+  'Små steg er fortsatt steg.',
+  'Du trenger ikke se hele veien for å ta neste skritt.',
+  'Ro kommer av å øve, ikke av å ha kommet i mål.',
+  'Det er lov å gå sakte, så lenge du fortsetter.',
+  'En dag av gangen er fortsatt fremgang.',
+  'Du har kommet lenger enn du tror.'
+];
+const todaysQuote = dailyQuotes[Math.floor(Math.random()*dailyQuotes.length)];
+let quoteSettingOn = true;
+function renderQuote(){
+  const el = document.getElementById('greet-quote');
+  if(quoteSettingOn){ el.textContent = '"'+todaysQuote+'" — '+avatarNames[currentAvatar]; el.style.display = 'block'; }
+  else { el.style.display = 'none'; }
+}
+function setFabAvatar(key){
+  currentAvatar = key;
+  document.getElementById('fab-avatar').innerHTML = avatarSvgs[key];
+  document.getElementById('chat-avatar-icon').innerHTML = avatarSvgs[key];
+  document.getElementById('chat-avatar-name').textContent = avatarNames[key];
+  document.getElementById('greet-avatar').innerHTML = avatarSvgs[key];
+  document.getElementById('greet-name').textContent = avatarNames[key];
+  document.getElementById('greet-text').textContent = avatarGreetings[key];
+  renderQuote();
+}
+setFabAvatar('rune');
+document.querySelectorAll('.quote-btn').forEach(function(btn){
+  btn.addEventListener('click', function(){
+    document.querySelectorAll('.quote-btn').forEach(function(b){b.classList.remove('active');});
+    btn.classList.add('active');
+    quoteSettingOn = btn.dataset.quote === 'on';
+    renderQuote();
+  });
+});
+
+const avatarEndOfDay = {
+  rune: {tag:'TIPS TIL I MORGEN', text:'Legg frem det du trenger til i morgen før du legger deg — bok, ladet mobil, eller bare et blikk på morgendagens fokus. En liten ting nå gjør oppstarten mye lettere.'},
+  live: {tag:'DU HAR FORTJENT NOE', text:'Du gjorde det i dag! Unn deg noe godt nå — en episode av det du elsker, litt godteri fra butikken, eller bare fem minutter uten å tenke på noe som helst.'},
+  vilde: {tag:'NOE Å TA MED DEG', text:'Du viste opp i dag, og det teller mer enn du tror. Du er god på å komme deg videre selv når det er tungt — vær litt stolt av det før du legger deg.'},
+  daniel: {tag:'DAGENS STATUS', text:'Du gjorde det som var i din kontroll i dag. Resten var aldri opp til deg. Legg en enkel plan for i morgen, og legg resten fra deg nå.'}
+};
+let eodSettingOn = true;
+function checkAllDone(){
+  const card = document.getElementById('eod-card');
+  const isEvening = new Date().getHours() >= 18;
+  if(eodSettingOn && isEvening){
+    const info = avatarEndOfDay[currentAvatar];
+    document.getElementById('eod-avatar').innerHTML = avatarSvgs[currentAvatar];
+    document.getElementById('eod-tag').textContent = info.tag;
+    document.getElementById('eod-text').textContent = info.text;
+    card.style.display = 'flex';
+  } else {
+    card.style.display = 'none';
+  }
+}
+checkAllDone();
+function maybeShowWelcome(){
+  const noData = data.student.courses.length===0 && data.hverdag.courses.length===0;
+  if(noData){ document.getElementById('welcome-overlay').classList.add('open'); }
+}
+document.getElementById('welcome-close').addEventListener('click', function(){
+  document.getElementById('welcome-overlay').classList.remove('open');
+});
+document.getElementById('welcome-done').addEventListener('click', function(){
+  document.getElementById('welcome-overlay').classList.remove('open');
+});
+maybeShowWelcome();
+document.querySelectorAll('.eod-btn').forEach(function(btn){
+  btn.addEventListener('click', function(){
+    document.querySelectorAll('.eod-btn').forEach(function(b){b.classList.remove('active');});
+    btn.classList.add('active');
+    eodSettingOn = btn.dataset.eod === 'on';
+    checkAllDone();
+  });
+});
+document.querySelectorAll('.examcd-btn').forEach(function(btn){
+  btn.addEventListener('click', function(){
+    document.querySelectorAll('.examcd-btn').forEach(function(b){b.classList.remove('active');});
+    btn.classList.add('active');
+    examCountdownOn = btn.dataset.examcd === 'on';
+    renderNearestAndExams(data[currentMode]);
+  });
+});
+const themes = {
+  brass: {'--brass':'#B4752A','--brass-deep':'#8A5A1F','--brass-tint':'#F0DFC4'},
+  teal: {'--brass':'#3E7C74','--brass-deep':'#2C5952','--brass-tint':'#D9E8E5'},
+  plum: {'--brass':'#8B5A7A','--brass-deep':'#653F59','--brass-tint':'#EBDDE6'},
+  forest: {'--brass':'#5C7A3E','--brass-deep':'#425A2C','--brass-tint':'#E3EAD9'},
+  slate: {'--brass':'#4A6280','--brass-deep':'#35485D','--brass-tint':'#DCE4EC'},
+  rust: {'--brass':'#B5502F','--brass-deep':'#873A22','--brass-tint':'#F0DAD1'},
+  rose: {'--brass':'#A6667C','--brass-deep':'#7A4A5B','--brass-tint':'#EDDCE2'},
+  mono: {'--brass':'#4A453D','--brass-deep':'#332F29','--brass-tint':'#E2DFD8'}
+};
+document.querySelectorAll('.theme-swatch').forEach(function(btn){
+  btn.addEventListener('click', function(){
+    document.querySelectorAll('.theme-swatch').forEach(function(b){b.classList.remove('active');});
+    btn.classList.add('active');
+    const t = themes[btn.dataset.theme];
+    Object.keys(t).forEach(function(k){ document.documentElement.style.setProperty(k, t[k]); });
+  });
+});
+document.querySelectorAll('.avatar-card').forEach(function(card){
+  card.addEventListener('click', function(){
+    document.querySelectorAll('.avatar-card').forEach(function(c){c.classList.remove('selected');});
+    card.classList.add('selected');
+    setFabAvatar(card.dataset.avatar);
+  });
+});
+function removeOneTask(){
+  const derived = deriveTodayFromPlan(data[currentMode]);
+  const target = derived.find(function(t){ return t.item.chip !== 'done'; });
+  if(!target) return null;
+  const group = data[currentMode].plan.find(function(g){ return g.group === target.group; });
+  const removed = group.items.splice(target.idx,1)[0];
+  return removed;
+}
+function addBreakTask(){
+  const list = data[currentMode].plan;
+  let group = list.find(function(g){ return g.group === 'Pause'; });
+  if(!group){ group = {group:'Pause', items:[]}; list.unshift(group); }
+  group.items.unshift({name:'Ta en 10-min pause', chip:'soon', label:'10 min', days:0, type:'Arbeidskrav'});
+}
+function addSystemMsg(text){
+  const body = document.getElementById('chat-body');
+  const el = document.createElement('div');
+  el.className = 'msg system';
+  el.textContent = text;
+  body.appendChild(el);
+  body.scrollTop = body.scrollHeight;
+}
+function addBotMsg(text){
+  const body = document.getElementById('chat-body');
+  const el = document.createElement('div');
+  el.className = 'msg bot';
+  el.textContent = text;
+  body.appendChild(el);
+  body.scrollTop = body.scrollHeight;
+}
+document.getElementById('chip-remove').addEventListener('click', function(){
+  const removed = removeOneTask();
+  if(removed){
+    renderMode();
+    addSystemMsg('Fjernet fra i dag: «'+removed.name+'»');
+    addBotMsg('Gjort. Den ligger klar igjen i morgen — fokuser på det som er igjen nå.');
+  } else {
+    addBotMsg('Det er ikke noe mer å fjerne — du er faktisk i mål med dagens liste!');
+  }
+});
+document.getElementById('chip-break').addEventListener('click', function(){
+  addBreakTask();
+  renderMode();
+  addSystemMsg('La til: «Ta en 10-min pause»');
+  addBotMsg('Lagt inn. Noen ganger er en pause nøyaktig det som mangler for å komme videre.');
+});
+
+const addFieldsConfig = {
+  Pensum: [
+    {label:'BOKTITTEL', placeholder:'F.eks. Kognitiv psykologi'},
+    {label:'FORFATTER (VALGFRITT)', placeholder:'F.eks. Eysenck og Keane'},
+    {label:'TOTALT ANTALL SIDER', placeholder:'F.eks. 120'},
+    {label:'FRIST FOR GJENNOMLESNING', isDate:true}
+  ],
+  Eksamen: [
+    {label:'EKSAMENSFORM', placeholder:'F.eks. Skriftlig, muntlig eller hjemme'},
+    {label:'DATO', isDate:true}
+  ],
+  Arbeidskrav: [
+    {label:'NAVN PÅ OPPGAVEN', placeholder:'F.eks. Innlevering 2'},
+    {label:'FRIST', isDate:true}
+  ],
+  Forelesning: [
+    {label:'TEMA', placeholder:'F.eks. Regresjonsanalyse'},
+    {label:'DATO', isDate:true}
+  ]
+};
+function applyTypeFields(type){
+  const cfg = addFieldsConfig[type];
+  for(let i=0;i<4;i++){
+    const n = i+1;
+    const wrap = document.getElementById('f'+n+'-wrap');
+    const input = document.getElementById('add-f'+n);
+    if(cfg[i]){
+      wrap.style.display = 'block';
+      document.getElementById('f'+n+'-label').textContent = cfg[i].label;
+      if(cfg[i].isDate){
+        input.type = 'date';
+        input.placeholder = '';
+      } else {
+        input.type = 'text';
+        input.placeholder = cfg[i].placeholder || '';
+      }
+      input.value = '';
+    } else {
+      wrap.style.display = 'none';
+    }
+  }
+}
+function renderCourseChips(){
+  const courses = data[currentMode].courses;
+  let html = courses.map(function(c,i){
+    return '<button class="quick-chip course-chip'+(i===0?' active':'')+'" data-course="'+c.name+'"><span class="subject-dot" style="background:'+(c.color||'var(--brass)')+';"></span>'+c.name+'</button>';
+  }).join('');
+  html += '<button class="quick-chip" id="new-subject-btn" type="button" style="background:var(--brass-tint);color:var(--brass-deep);">+ Nytt fag</button>';
+  document.getElementById('course-chips').innerHTML = html;
+  document.querySelectorAll('.course-chip').forEach(function(chip){
+    chip.addEventListener('click', function(){
+      document.querySelectorAll('.course-chip').forEach(function(c){c.classList.remove('active');});
+      chip.classList.add('active');
+    });
+  });
+  document.getElementById('new-subject-btn').addEventListener('click', function(){
+    const row = document.getElementById('new-subject-row');
+    const showing = row.style.display === 'block';
+    row.style.display = showing ? 'none' : 'block';
+    if(!showing){ document.getElementById('new-subject-input').focus(); }
+  });
+}
+document.querySelectorAll('.type-chip').forEach(function(chip){
+  chip.addEventListener('click', function(){
+    document.querySelectorAll('.type-chip').forEach(function(c){c.classList.remove('active');});
+    chip.classList.add('active');
+    applyTypeFields(chip.dataset.type);
+  });
+});
+document.getElementById('new-subject-confirm').addEventListener('click', function(){
+  const input = document.getElementById('new-subject-input');
+  const trimmed = input.value.trim();
+  if(!trimmed) return;
+  const autoColor = subjectPalette[data[currentMode].courses.length % subjectPalette.length];
+  data[currentMode].courses.push({name:trimmed, pct:0, sub:'Nettopp lagt til', next:'Ingen frister ennå', color:autoColor});
+  input.value = '';
+  document.getElementById('new-subject-row').style.display = 'none';
+  renderCourseChips();
+  renderMode();
+  const newChip = document.querySelector('.course-chip[data-course="'+trimmed.replace(/"/g,'')+'"]');
+  if(newChip){
+    document.querySelectorAll('.course-chip').forEach(function(c){c.classList.remove('active');});
+    newChip.classList.add('active');
+  }
+});
+document.getElementById('add-open').addEventListener('click', function(){
+  renderCourseChips();
+  applyTypeFields(document.querySelector('.type-chip.active').dataset.type);
+  document.getElementById('new-subject-row').style.display = 'none';
+  document.getElementById('new-subject-input').value = '';
+  document.getElementById('add-overlay').classList.add('open');
+});
+document.getElementById('add-close').addEventListener('click', function(){
+  document.getElementById('add-overlay').classList.remove('open');
+});
+document.getElementById('add-save').addEventListener('click', function(){
+  const type = document.querySelector('.type-chip.active').dataset.type;
+  const courseBtn = document.querySelector('.course-chip.active');
+  const courseName = courseBtn ? courseBtn.dataset.course : 'Annet';
+  const list = data[currentMode].plan;
+  let group = list.find(function(g){ return g.group === courseName; });
+  if(!group){ group = {group:courseName, items:[]}; list.unshift(group); }
+  let newItem;
+  if(type === 'Pensum'){
+    const title = document.getElementById('add-f1').value.trim();
+    const author = document.getElementById('add-f2').value.trim();
+    const pages = parseInt(document.getElementById('add-f3').value.trim(),10) || 0;
+    const deadlineInfo = dateInputToLabelAndDays(document.getElementById('add-f4').value);
+    if(!title) return;
+    newItem = {name:'Pensum: '+title, chip:'soon', label:deadlineInfo.label, type:'Pensum', author:author, totalPages:pages, pagesRead:0, totalMinutes:0};
+    if(deadlineInfo.days !== null){ newItem.days = deadlineInfo.days; }
+  } else {
+    const f1 = document.getElementById('add-f1').value.trim();
+    const dateInfo = dateInputToLabelAndDays(document.getElementById('add-f2').value);
+    if(!f1) return;
+    newItem = {name:type+': '+f1, chip:'soon', label:dateInfo.label, type:type};
+    if(dateInfo.days !== null){ newItem.days = dateInfo.days; }
+  }
+  group.items.unshift(newItem);
+  renderMode();
+  document.getElementById('add-overlay').classList.remove('open');
+});
+
+const breakFeedback = {
+  '25':'er en god start hvis konsentrasjonen ofte glipper tidlig. Vi kan strekke arbeidsøkten lengre etter hvert som det føles riktig.',
+  '45':'er en solid middelvei — lang nok til å komme i flyt, kort nok til å unngå overveldelse.',
+  '60':'krever at du allerede kjenner din egen kapasitet godt. Kjennes det tungt, er det helt greit å gå ned igjen.'
+};
+const restOptionsForWork = {'25':[5,10], '45':[5,10], '60':[5,10,15]};
+let currentRest = 5;
+function renderRestOptions(){
+  const work = document.querySelector('.break-btn.active').dataset.break;
+  const opts = restOptionsForWork[work];
+  if(opts.indexOf(currentRest)===-1){ currentRest = opts[0]; }
+  document.getElementById('rest-toggle-group').innerHTML = opts.map(function(m){
+    return '<button class="rest-btn'+(m===currentRest?' active':'')+'" data-rest="'+m+'">'+m+' min</button>';
+  }).join('');
+  document.querySelectorAll('.rest-btn').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      currentRest = parseInt(btn.dataset.rest,10);
+      renderRestOptions();
+      updateBreakFeedback();
+    });
+  });
+}
+function updateBreakFeedback(){
+  const work = document.querySelector('.break-btn.active').dataset.break;
+  document.getElementById('break-feedback').textContent =
+    work+' minutter arbeid og '+currentRest+' minutter pause '+breakFeedback[work];
+}
+document.querySelectorAll('.break-btn').forEach(function(btn){
+  btn.addEventListener('click', function(){
+    document.querySelectorAll('.break-btn').forEach(function(b){b.classList.remove('active');});
+    btn.classList.add('active');
+    currentWorkMinutes = parseInt(btn.dataset.break,10);
+    renderRestOptions();
+    updateBreakFeedback();
+  });
+});
+renderRestOptions();
+const breakTips = [
+  {name:'Meditasjon eller pusteøvelse', why:'Kan roe ned nervesystemet og gjøre det lettere å samle tankene igjen etterpå.'},
+  {name:'En luftetur', why:'Bevegelse og frisk luft er noe av det bedre støttede for å gjenopprette oppmerksomhet — fysisk aktivitet har også god forskningsstøtte spesifikt ved ADHD.'},
+  {name:'Ligg stille uten skjerm', why:'Ekte stillhet gir hjernen rom til å bearbeide det du nettopp jobbet med — noe som lett forsvinner hvis pausen fylles med sosiale medier i stedet.'},
+  {name:'Spill favorittsangen din', why:'En sang du kjenner godt gir en forutsigbar, rolig overgang mellom jobb og pause — du kan lagre den under innstillinger.'},
+  {name:'Strekk litt på kroppen', why:'Korte bevegelsespauser motvirker stivhet og kan gjøre det lettere å komme i gang igjen etterpå.'}
+];
+function renderBreakTips(on){
+  const el = document.getElementById('break-tips-list');
+  el.innerHTML = on ? breakTips.map(function(t){
+    return '<div class="tip-card"><p class="tname">'+t.name+'</p><p class="twhy">'+t.why+'</p></div>';
+  }).join('') : '';
+}
+document.querySelectorAll('.tips-btn').forEach(function(btn){
+  btn.addEventListener('click', function(){
+    document.querySelectorAll('.tips-btn').forEach(function(b){b.classList.remove('active');});
+    btn.classList.add('active');
+    renderBreakTips(btn.dataset.tips === 'on');
+  });
+});
+renderBreakTips(true);
+
+document.getElementById('fab-btn').addEventListener('click', function(){
+  document.getElementById('chat-overlay').classList.add('open');
+});
+document.getElementById('chat-close').addEventListener('click', function(){
+  document.getElementById('chat-overlay').classList.remove('open');
+});
+function sendChat(){
+  const input = document.getElementById('chat-input');
+  const text = input.value.trim();
+  if(!text) return;
+  const body = document.getElementById('chat-body');
+  const userMsg = document.createElement('div');
+  userMsg.className = 'msg user';
+  userMsg.textContent = text;
+  body.appendChild(userMsg);
+  input.value = '';
+  body.scrollTop = body.scrollHeight;
+  const typing = document.createElement('div');
+  typing.className = 'msg typing';
+  typing.textContent = 'Skriver …';
+  body.appendChild(typing);
+  body.scrollTop = body.scrollHeight;
+  setTimeout(function(){
+    typing.remove();
+    const reply = document.createElement('div');
+    reply.className = 'msg bot';
+    reply.textContent = avatarReplies[currentAvatar];
+    body.appendChild(reply);
+    body.scrollTop = body.scrollHeight;
+  }, 900);
+}
+document.getElementById('chat-send').addEventListener('click', sendChat);
+document.getElementById('chat-input').addEventListener('keydown', function(e){ if(e.key==='Enter'){ sendChat(); } });
+
+let sessionSeconds = 0;
+let sessionTimer = null;
+function demoTargetSeconds(){
+  return currentWorkMinutes===25 ? 15 : currentWorkMinutes===45 ? 25 : 35;
+}
+function updateSessionVisual(){
+  const target = demoTargetSeconds();
+  const pct = Math.min(sessionSeconds/target,1);
+  const grow = (0.15 + pct*1.15).toFixed(2);
+  document.getElementById('tree-grow').style.setProperty('--grow', grow);
+  const totalRealSeconds = currentWorkMinutes*60;
+  const remaining = Math.max(0, Math.round(totalRealSeconds*(1-pct)));
+  const mm = String(Math.floor(remaining/60)).padStart(2,'0');
+  const ss = String(remaining%60).padStart(2,'0');
+  document.getElementById('session-timer').textContent = mm+':'+ss;
+}
+function endSession(completed){
+  clearInterval(sessionTimer);
+  sessionTimer = null;
+  document.getElementById('screen-session').classList.remove('active');
+  if(completed){
+    forest.push({size:sizeForWork(), kind:selectedKind, day:0});
+    weeklyMinutes += currentWorkMinutes;
+    renderFocus();
+    startBreak();
+  } else {
+    document.getElementById('screen-today').classList.add('active');
+  }
+}
+let breakElapsed = 0;
+let breakTimerHandle = null;
+const breakDemoSeconds = 20;
+function renderBreakTipPreview(){
+  const el = document.getElementById('break-tip-preview');
+  const tipsOn = document.querySelector('.tips-btn.active').dataset.tips === 'on';
+  if(!tipsOn){ el.style.display = 'none'; return; }
+  el.style.display = 'block';
+  const tip = breakTips[Math.floor(Math.random()*breakTips.length)];
+  el.innerHTML = '<p class="tname">Forslag: '+tip.name+'</p><p class="twhy">'+tip.why+'</p>';
+}
+function updateBreakTimerVisual(){
+  const totalRealSeconds = currentRest*60;
+  const remaining = Math.max(0, Math.round(totalRealSeconds*(1-breakElapsed/breakDemoSeconds)));
+  const mm = String(Math.floor(remaining/60)).padStart(2,'0');
+  const ss = String(remaining%60).padStart(2,'0');
+  document.getElementById('break-timer').textContent = mm+':'+ss;
+}
+function startBreak(){
+  document.querySelectorAll('.screen').forEach(function(s){s.classList.remove('active');});
+  document.getElementById('screen-break').classList.add('active');
+  breakElapsed = 0;
+  renderBreakTipPreview();
+  updateBreakTimerVisual();
+  breakTimerHandle = setInterval(function(){
+    breakElapsed++;
+    updateBreakTimerVisual();
+    if(breakElapsed>=breakDemoSeconds){ endBreak(); }
+  },1000);
+}
+function endBreak(){
+  clearInterval(breakTimerHandle);
+  breakTimerHandle = null;
+  document.getElementById('screen-break').classList.remove('active');
+  document.getElementById('screen-today').classList.add('active');
+}
+document.getElementById('skip-break-btn').addEventListener('click', endBreak);
+function renderLengthPicker(){
+  const opts = [
+    {min:25, label:'25 minutter', size:'small', restLabel:'5 min pause'},
+    {min:45, label:'45 minutter', size:'medium', restLabel:'10 min pause'},
+    {min:60, label:'60 minutter', size:'large', restLabel:'15 min pause'}
+  ];
+  document.getElementById('length-list').innerHTML = opts.map(function(o){
+    return '<div class="length-card" data-min="'+o.min+'">'+treeSvg(o.size)+
+      '<div><p class="lname">'+o.label+'</p><p class="lsub">Gir et '+(o.size==='small'?'lite':o.size==='medium'?'middels':'stort')+' tre, og '+o.restLabel+' etterpå</p></div></div>';
+  }).join('');
+  document.querySelectorAll('.length-card').forEach(function(card){
+    card.addEventListener('click', function(){
+      currentWorkMinutes = parseInt(card.dataset.min,10);
+      currentRest = restOptionsForWork[String(currentWorkMinutes)][0];
+      document.getElementById('length-overlay').classList.remove('open');
+      beginSession();
+    });
+  });
+}
+document.getElementById('open-length-btn').addEventListener('click', function(){
+  renderLengthPicker();
+  document.getElementById('length-overlay').classList.add('open');
+});
+document.getElementById('length-close').addEventListener('click', function(){
+  document.getElementById('length-overlay').classList.remove('open');
+});
+function beginSession(){
+  sessionSeconds = 0;
+  document.querySelectorAll('.screen').forEach(function(s){s.classList.remove('active');});
+  document.getElementById('screen-session').classList.add('active');
+  updateSessionVisual();
+  sessionTimer = setInterval(function(){
+    sessionSeconds++;
+    updateSessionVisual();
+    if(sessionSeconds>=demoTargetSeconds()){ endSession(true); }
+  },1000);
+}
+document.getElementById('end-session-btn').addEventListener('click', function(){ endSession(false); });
+if('serviceWorker' in navigator){
+  window.addEventListener('load', function(){ navigator.serviceWorker.register('sw.js'); });
+}
+</script>
+</body>
+</html>
